@@ -1,36 +1,32 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Raasta — Lahore ride experiences
 
-## Getting Started
+Hackathon prototype for privately submitting rideshare incident reports and showing aggregated community patterns.
 
-First, run the development server:
+## Run it locally
 
-```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+```powershell
+npm.cmd run dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+Open the local URL shown in the terminal. With no Supabase keys, the site runs in **demo mode**. Reports are saved only in that browser's local storage, and the dashboard starts with clearly labelled illustrative sample data.
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+## Connect Supabase
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+1. Create a Supabase project.
+2. Open **SQL Editor**, paste and run [`supabase/schema.sql`](supabase/schema.sql).
+3. Copy `.env.example` to `.env.local`; set the project URL and **publishable key** from the Supabase project settings.
+4. Restart `npm run dev`.
 
-## Learn More
+Incoming reports go to `ride_reports`. Anonymous visitors can insert pending reports, but cannot read or edit them. Review submissions in the Supabase dashboard. Add only reviewed, genuinely aggregated groups to `public_ride_trends`; each row must contain a count of at least three. The public app can read that aggregate table only.
 
-To learn more about Next.js, take a look at the following resources:
+Do not put a Supabase secret or service-role key in `.env.local` or frontend code. Do not publish individual reports, names, number plates, exact addresses, screenshots, or identifying details. The optional free-text report detail remains private in the reports table for review.
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+## Product scope
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+- Report form: provider, issue, broad Lahore area, trip month, optional private context.
+- Community pulse: grouped counts, service filter, minimum visible group size of three.
+- No user accounts, driver profiles, public accusations, or emergency response claims.
 
-## Deploy on Vercel
+## Deploy
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+Deploy the `ridesafe-lahore` folder as a Next.js project on Vercel. If using Supabase mode, add the two `.env.local` values as Vercel environment variables, then redeploy. Until someone reviews reports and updates the aggregate table, the shared dashboard will be empty by design.
