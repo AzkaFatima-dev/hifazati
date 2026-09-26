@@ -46,7 +46,7 @@ export default function Home() {
   useEffect(() => {
     if (!connected) return;
     fetch(`${supabaseUrl}/rest/v1/public_ride_trends?select=provider,issue_type,area,report_count`, {
-      headers: { apikey: supabaseKey!, Authorization: `Bearer ${supabaseKey}` },
+      headers: { apikey: supabaseKey! },
     }).then(async (response) => {
       if (!response.ok) throw new Error("Unable to load trends");
       const rows = (await response.json()) as Trend[];
@@ -84,7 +84,7 @@ export default function Home() {
     try {
       const response = await fetch(`${supabaseUrl}/rest/v1/ride_reports`, {
         method: "POST",
-        headers: { apikey: supabaseKey!, Authorization: `Bearer ${supabaseKey}`, "Content-Type": "application/json", Prefer: "return=minimal" },
+        headers: { apikey: supabaseKey!, "Content-Type": "application/json", Prefer: "return=minimal" },
         body: JSON.stringify({
           provider: String(form.get("provider")),
           issue_type: String(form.get("issue")),
