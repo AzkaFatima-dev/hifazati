@@ -1,6 +1,9 @@
 "use client";
 
 import { FormEvent, useEffect, useMemo, useState } from "react";
+import type { Session } from "@supabase/supabase-js";
+import AuthDialog, { type AuthMode } from "./components/AuthDialog";
+import { supabase } from "./lib/supabase";
 
 type View = "dashboard" | "report" | "about";
 type Provider = "Uber" | "inDrive" | "Yango" | "Other";
@@ -42,6 +45,19 @@ export default function Home() {
   const [submitting, setSubmitting] = useState(false);
   const [formMessage, setFormMessage] = useState("");
   const [formError, setFormError] = useState("");
+  const [session, setSession] = useState<Session | null>(null);
+  const [authLoading, setAuthLoading] = useState(connected);
+  const [authMode, setAuthMode] = useState<AuthMode | null>(null);
+
+  useEffect(() => {
+    if (!supabase) return;
+    const { data } = supabase.auth.onAuthStateChange((event, nextSession) => {
+      setSession(nextSession);
+      setAuthLoading(false);
+      if (event === "PASSWORD_RECOVERY") setAuthMode("update");
+    });
+    return () => data.subscription.unsubscribe();
+  }, []);
 
   useEffect(() => {
     if (!connected) return;
@@ -73,27 +89,37 @@ export default function Home() {
     window.scrollTo({ top: 0, behavior: "smooth" });
   }
 
+  async function signOut() {
+    if (!supabase) return;
+    const { error } = await supabase.auth.signOut();
+    if (error) setFormError("Could not log out. Please try again.");
+    else {
+      setSession(null);
+      setFormMessage("");
+      setFormError("");
+    }
+  }
+
   async function submitReport(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
-    if (!connected) return;
+    if (!supabase || !session) {
+      setAuthMode("login");
+      return;
+    }
     const formElement = event.currentTarget;
     const form = new FormData(formElement);
     setSubmitting(true);
     setFormMessage("");
     setFormError("");
     try {
-      const response = await fetch(`${supabaseUrl}/rest/v1/ride_reports`, {
-        method: "POST",
-        headers: { apikey: supabaseKey!, "Content-Type": "application/json", Prefer: "return=minimal" },
-        body: JSON.stringify({
-          provider: String(form.get("provider")),
-          issue_type: String(form.get("issue")),
-          area: String(form.get("area")),
-          trip_month: `${String(form.get("month"))}-01`,
-          details: String(form.get("details") || "").trim() || null,
-        }),
+      const { error } = await supabase.from("ride_reports").insert({
+        provider: String(form.get("provider")),
+        issue_type: String(form.get("issue")),
+        area: String(form.get("area")),
+        trip_month: `${String(form.get("month"))}-01`,
+        details: String(form.get("details") || "").trim() || null,
       });
-      if (!response.ok) throw new Error("Could not send report");
+      if (error) throw error;
       formElement.reset();
       setFormMessage("Your report was sent privately for review. It will not appear as an individual public post.");
     } catch {
@@ -118,7 +144,7 @@ export default function Home() {
     </aside>
 
     <div className="main-area">
-      <header className="topbar"><div className="crumb"><span>Hifazati</span><span className="crumb-divider">/</span><b>{view === "dashboard" ? "Dashboard" : view === "report" ? "Share a report" : "How it works"}</b></div><div className="topbar-right"><span className="location-pill"><Icon name="pin" size={15} /> Lahore, Pakistan</span><span className="top-avatar">H</span></div></header>
+      <header className="topbar"><div className="crumb"><span>Hifazati</span><span className="crumb-divider">/</span><b>{view === "dashboard" ? "Dashboard" : view === "report" ? "Share a report" : "How it works"}</b></div><div className="topbar-right"><span className="location-pill"><Icon name="pin" size={15} /> Lahore, Pakistan</span>{session ? <><span className="account-email" title={session.user.email}>{session.user.email}</span><button type="button" className="account-button" onClick={signOut}>Log out</button></> : !authLoading && connected && <><button type="button" className="account-button" onClick={() => setAuthMode("login")}>Log in</button><button type="button" className="account-button register-button" onClick={() => setAuthMode("register")}>Register</button></>}</div></header>
       <main className="content">
         {view === "dashboard" && <>
           <div className="page-heading"><div><span className="overline">COMMUNITY SAFETY DASHBOARD</span><h1>Ride experiences, <em>made visible.</em></h1><p>Reviewed patterns from riders in Lahore. Individual reports stay private.</p></div><button className="primary-button" onClick={() => openView("report")}>Share an experience <Icon name="arrow" size={17} /></button></div>
@@ -142,11 +168,14 @@ export default function Home() {
           </section>
         </>}
 
-        {view === "report" && <><div className="page-heading"><div><span className="overline">PRIVATE INCIDENT REPORT</span><h1>Your experience <em>matters.</em></h1><p>Share what happened during a Lahore ride. Reports are private until grouped patterns are reviewed.</p></div></div><div className="report-layout"><section className="card form-card"><div className="card-heading"><div><h3>About the ride</h3><p>Do not include names, phone numbers, plates, or exact addresses.</p></div><span className="card-tag">PRIVATE SUBMISSION</span></div>{!connected && <div className="form-offline"><Icon name="info" size={19} /><span>Reporting is not open yet. The form will become available when secure storage is connected.</span></div>}<form onSubmit={submitReport}><fieldset disabled={!connected || submitting}><div className="field-grid"><label>Ride service<select name="provider" required defaultValue=""><option value="" disabled>Select a service</option>{providers.map((provider) => <option key={provider}>{provider}</option>)}</select></label><label>What happened?<select name="issue" required defaultValue=""><option value="" disabled>Choose a topic</option>{issues.map((issue) => <option key={issue}>{issue}</option>)}</select></label><label>Broad area<select name="area" required defaultValue=""><option value="" disabled>Select an area</option>{areas.map((area) => <option key={area}>{area}</option>)}</select></label><label>Month of ride<input name="month" type="month" required max={new Date().toISOString().slice(0, 7)} /></label></div><label className="details-field">More context <span>OPTIONAL · 280 CHARACTERS MAX</span><textarea name="details" maxLength={280} rows={4} placeholder="Describe the issue without identifying anyone." /></label><label className="consent"><input type="checkbox" required /><span>I understand that reports are user-submitted and reviewed before any group count is published.</span></label>{formMessage && <div className="form-feedback success" role="status">{formMessage}</div>}{formError && <div className="form-feedback error" role="alert">{formError}</div>}<button className="primary-button submit-button" type="submit">{submitting ? "Sending…" : "Send report privately"}<Icon name="arrow" size={17} /></button></fieldset></form></section><aside className="report-side"><div className="card trust-card"><span className="trust-symbol"><Icon name="lock" size={23} /></span><h3>Privacy comes first.</h3><p>Your individual report is never posted publicly. The dashboard shows grouped counts only after review.</p><div className="trust-row"><Icon name="check" size={17} /> No public driver profiles</div><div className="trust-row"><Icon name="check" size={17} /> No exact trip locations</div><div className="trust-row"><Icon name="check" size={17} /> No public descriptions</div></div><p className="emergency-note">Hifazati is not an emergency service. If you are in immediate danger, contact someone you trust or local emergency services.</p></aside></div></>}
+        {view === "report" && connected && !session && <div className="login-notice"><Icon name="lock" size={21} /><div><strong>{authLoading ? "Checking your account…" : "Log in to send a private report"}</strong><p>{authLoading ? "Your saved session is loading." : "Register with your email and password, or log in to an existing account."}</p></div>{!authLoading && <div className="login-notice-actions"><button type="button" className="account-button" onClick={() => setAuthMode("login")}>Log in</button><button type="button" className="primary-button" onClick={() => setAuthMode("register")}>Register</button></div>}</div>}
+
+        {view === "report" && <><div className="page-heading"><div><span className="overline">PRIVATE INCIDENT REPORT</span><h1>Your experience <em>matters.</em></h1><p>Share what happened during a Lahore ride. Reports are private until grouped patterns are reviewed.</p></div></div><div className="report-layout"><section className="card form-card"><div className="card-heading"><div><h3>About the ride</h3><p>Do not include names, phone numbers, plates, or exact addresses.</p></div><span className="card-tag">PRIVATE SUBMISSION</span></div>{!connected && <div className="form-offline"><Icon name="info" size={19} /><span>Reporting is not open yet. The form will become available when secure storage is connected.</span></div>}<form onSubmit={submitReport}><fieldset disabled={!connected || authLoading || !session || submitting}><div className="field-grid"><label>Ride service<select name="provider" required defaultValue=""><option value="" disabled>Select a service</option>{providers.map((provider) => <option key={provider}>{provider}</option>)}</select></label><label>What happened?<select name="issue" required defaultValue=""><option value="" disabled>Choose a topic</option>{issues.map((issue) => <option key={issue}>{issue}</option>)}</select></label><label>Broad area<select name="area" required defaultValue=""><option value="" disabled>Select an area</option>{areas.map((area) => <option key={area}>{area}</option>)}</select></label><label>Month of ride<input name="month" type="month" required max={new Date().toISOString().slice(0, 7)} /></label></div><label className="details-field">More context <span>OPTIONAL · 280 CHARACTERS MAX</span><textarea name="details" maxLength={280} rows={4} placeholder="Describe the issue without identifying anyone." /></label><label className="consent"><input type="checkbox" required /><span>I understand that reports are user-submitted and reviewed before any group count is published.</span></label>{formMessage && <div className="form-feedback success" role="status">{formMessage}</div>}{formError && <div className="form-feedback error" role="alert">{formError}</div>}<button className="primary-button submit-button" type="submit">{submitting ? "Sending…" : "Send report privately"}<Icon name="arrow" size={17} /></button></fieldset></form></section><aside className="report-side"><div className="card trust-card"><span className="trust-symbol"><Icon name="lock" size={23} /></span><h3>Privacy comes first.</h3><p>Your individual report is never posted publicly. The dashboard shows grouped counts only after review.</p><div className="trust-row"><Icon name="check" size={17} /> No public driver profiles</div><div className="trust-row"><Icon name="check" size={17} /> No exact trip locations</div><div className="trust-row"><Icon name="check" size={17} /> No public descriptions</div></div><p className="emergency-note">Hifazati is not an emergency service. If you are in immediate danger, contact someone you trust or local emergency services.</p></aside></div></>}
 
         {view === "about" && <><div className="page-heading"><div><span className="overline">ABOUT HIFAZATI</span><h1>Safer conversations<br /><em>start here.</em></h1><p>A private place to report a difficult ride and a public view of reviewed patterns in Lahore.</p></div><button className="primary-button" onClick={() => openView("report")}>Share an experience <Icon name="arrow" size={17} /></button></div><div className="about-grid"><div className="card about-card"><span>01 / PRIVATE</span><Icon name="note" size={30} /><h3>Tell us what happened</h3><p>Reports are structured around service, concern, broad area, and month. Extra context stays private.</p></div><div className="card about-card"><span>02 / REVIEWED</span><Icon name="shield" size={30} /><h3>Look for patterns</h3><p>Reports are reviewed before being counted. Individual claims are not posted on the site.</p></div><div className="card about-card"><span>03 / SHARED</span><Icon name="grid" size={30} /><h3>Inform the community</h3><p>Only groups of at least three appear publicly, so people can see themes without identifying riders.</p></div></div></>}
       </main>
       <footer className="app-footer"><span>© {new Date().getFullYear()} Hifazati · حفاظتی</span><span>Built for Lahore riders</span></footer>
     </div>
+    {authMode && <AuthDialog mode={authMode} onClose={() => setAuthMode(null)} onModeChange={setAuthMode} onSignedIn={() => setAuthMode(null)} />}
   </div>;
 }
