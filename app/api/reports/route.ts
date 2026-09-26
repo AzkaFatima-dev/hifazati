@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import {
-  areas, driverPhotoTypes, evidenceBucket, evidenceTypes, issues,
+  driverPhotoTypes, evidenceBucket, evidenceTypes, issues,
   maxDriverPhotoBytes, maxEvidenceBytes, maxEvidenceFiles, providers,
 } from "../../lib/report-options";
 import { getSupabaseAdmin } from "../../lib/supabase-admin";
@@ -26,12 +26,14 @@ export async function POST(request: Request) {
   const providerOther = typeof data.providerOther === "string" ? data.providerOther.trim() : "";
   const driverContact = typeof data.driverContact === "string" ? data.driverContact.trim() : "";
   const details = typeof data.details === "string" ? data.details.trim() : "";
+  const area = typeof data.area === "string" ? data.area.trim().replace(/\s+/g, " ") : "";
   const evidencePaths = data.evidencePaths;
   const driverPhotoPath = data.driverPhotoPath;
   const month = data.tripMonth;
 
   if (typeof reportId !== "string" || !uuidPattern.test(reportId) ||
-      !isChoice(data.provider, providers) || !isChoice(data.issueType, issues) || !isChoice(data.area, areas) ||
+      !isChoice(data.provider, providers) || !isChoice(data.issueType, issues) ||
+      area.length < 2 || area.length > 80 || !/[\p{L}\p{N}]/u.test(area) || /[\u0000-\u001f\u007f]/u.test(area) ||
       (data.provider === "Other" && (providerOther.length < 3 || providerOther.length > 160)) ||
       !/^[+0-9() -]{9,24}$/.test(driverContact) ||
       !/^\d{9,15}$/.test(driverContact.replace(/\D/g, "")) ||
@@ -65,7 +67,7 @@ export async function POST(request: Request) {
     provider: data.provider,
     provider_other: data.provider === "Other" ? providerOther : null,
     issue_type: data.issueType,
-    area: data.area,
+    area,
     trip_month: `${month}-01`,
     details,
     driver_contact: driverContact,

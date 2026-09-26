@@ -73,7 +73,7 @@ export default function DashboardClient({ initialView }: { initialView: View }) 
   const total = visible.reduce((sum, row) => sum + row.report_count, 0);
   const serviceTotals = providers.map((provider) => ({ provider, count: visible.filter((row) => row.provider === provider).reduce((sum, row) => sum + row.report_count, 0) })).filter((row) => row.count > 0);
   const issueTotals = issues.map((issue) => ({ issue, count: visible.filter((row) => row.issue_type === issue).reduce((sum, row) => sum + row.report_count, 0) })).filter((row) => row.count > 0).sort((a, b) => b.count - a.count);
-  const areaTotals = areas.map((area) => ({ area, count: visible.filter((row) => row.area === area).reduce((sum, row) => sum + row.report_count, 0) })).filter((row) => row.count > 0).sort((a, b) => b.count - a.count);
+  const areaTotals = [...new Set(visible.map((row) => row.area))].map((area) => ({ area, count: visible.filter((row) => row.area === area).reduce((sum, row) => sum + row.report_count, 0) })).filter((row) => row.count > 0).sort((a, b) => b.count - a.count);
   const maxService = Math.max(1, ...serviceTotals.map((row) => row.count));
   const hasData = loadState === "ready" && total > 0;
   const donut = issueTotals.map((row, index) => {
@@ -205,16 +205,17 @@ export default function DashboardClient({ initialView }: { initialView: View }) 
               <form onSubmit={submitReport}>
                 <fieldset disabled={!connected || submitting}>
                   <div className="field-grid">
-                    <label>Ride service<select name="provider" required value={selectedProvider} onChange={(event) => setSelectedProvider(event.target.value)}><option value="" disabled>Select a service</option>{providers.map((provider) => <option key={provider}>{provider}</option>)}</select></label>
-                    <label>Type of concern<select name="issue" required defaultValue=""><option value="" disabled>Choose a topic</option>{issues.map((issue) => <option key={issue}>{issue}</option>)}</select></label>
-                    <label>Broad area<select name="area" required defaultValue=""><option value="" disabled>Select an area</option>{areas.map((area) => <option key={area}>{area}</option>)}</select></label>
-                    <label>Month of ride<input name="month" type="month" required max={new Date().toISOString().slice(0, 7)} /></label>
+                    <label><span className="field-label">Ride service <b className="required-mark" aria-hidden="true">*</b></span><select name="provider" required value={selectedProvider} onChange={(event) => setSelectedProvider(event.target.value)}><option value="" disabled>Select a service</option>{providers.map((provider) => <option key={provider}>{provider}</option>)}</select></label>
+                    <label><span className="field-label">Type of concern <b className="required-mark" aria-hidden="true">*</b></span><select name="issue" required defaultValue=""><option value="" disabled>Choose a topic</option>{issues.map((issue) => <option key={issue}>{issue}</option>)}</select></label>
+                    <label><span className="field-label">Lahore area <b className="required-mark" aria-hidden="true">*</b></span><input name="area" list="lahore-areas" type="text" required minLength={2} maxLength={80} autoComplete="off" placeholder="Search or type your area" /><small>Use the neighborhood, not an exact address.</small></label>
+                    <label><span className="field-label">Month of ride <b className="required-mark" aria-hidden="true">*</b></span><input name="month" type="month" required max={new Date().toISOString().slice(0, 7)} /></label>
                     <label><span className="field-label">Driver contact number <b className="required-mark" aria-hidden="true">*</b></span><input name="driverContact" type="tel" inputMode="tel" required minLength={9} maxLength={24} placeholder="03XX XXXXXXX or +92…" /><small>Private to reviewers</small></label>
-                    {selectedProvider === "Other" && <label>Describe the service or local ride<input name="providerOther" required minLength={3} maxLength={160} placeholder="E.g. local rickshaw from a nearby stand" /></label>}
+                    {selectedProvider === "Other" && <label><span className="field-label">Describe the service or local ride <b className="required-mark" aria-hidden="true">*</b></span><input name="providerOther" required minLength={3} maxLength={160} placeholder="E.g. local rickshaw from a nearby stand" /></label>}
                   </div>
+                  <datalist id="lahore-areas">{areas.map((area) => <option key={area} value={area} />)}</datalist>
                   <label className="details-field"><span className="field-label">What happened? <b className="required-mark" aria-hidden="true">*</b></span><textarea name="details" required maxLength={2000} rows={5} placeholder="Describe the incident without sharing your own identifying details." /></label>
-                  <label className="file-field">Proof of the incident <span>REQUIRED · 1–3 FILES · UP TO 20 MB EACH</span><input name="evidence" type="file" multiple required accept=".jpg,.jpeg,.png,.webp,.heic,.heif,.mp3,.m4a,.wav,.ogg,.webm,.mp4,.mov,.pdf" /><small>Images, audio messages, short videos, or PDF documents. Files are never shown publicly.</small></label>
-                  <label className="file-field">Driver photo <span>OPTIONAL · UP TO 8 MB</span><input name="driverPhoto" type="file" accept="image/jpeg,image/png,image/webp,image/heic,image/heif" /><small>Only add a photo if you have one. It stays private with the report.</small></label>
+                  <label className="file-field"><span className="field-label">Proof of the incident <b className="required-mark" aria-hidden="true">*</b></span><span>1–3 FILES · UP TO 20 MB EACH</span><input name="evidence" type="file" multiple required accept=".jpg,.jpeg,.png,.webp,.heic,.heif,.mp3,.m4a,.wav,.ogg,.webm,.mp4,.mov,.pdf" /><small>Images, audio messages, short videos, or PDF documents. Files are never shown publicly.</small></label>
+                  <label className="file-field">Driver photo <span>UP TO 8 MB</span><input name="driverPhoto" type="file" accept="image/jpeg,image/png,image/webp,image/heic,image/heif" /><small>Only add a photo if you have one. It stays private with the report.</small></label>
                   <label className="consent"><input type="checkbox" required /><span>I understand this is a private, user-submitted claim. Only reviewed group counts may appear publicly.</span></label>
                   {formMessage && <div className="form-feedback success" role="status">{formMessage}</div>}
                   {formError && <div className="form-feedback error" role="alert">{formError}</div>}
