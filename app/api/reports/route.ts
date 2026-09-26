@@ -35,7 +35,7 @@ export async function POST(request: Request) {
       (data.provider === "Other" && (providerOther.length < 3 || providerOther.length > 160)) ||
       !/^[+0-9() -]{9,24}$/.test(driverContact) ||
       !/^\d{9,15}$/.test(driverContact.replace(/\D/g, "")) ||
-      details.length > 2000 ||
+      details.length < 1 || details.length > 2000 ||
       typeof month !== "string" || !/^\d{4}-(0[1-9]|1[0-2])$/.test(month) ||
       `${month}-01` > new Date().toISOString().slice(0, 10) ||
       !Array.isArray(evidencePaths) || evidencePaths.length < 1 || evidencePaths.length > maxEvidenceFiles ||
@@ -67,7 +67,7 @@ export async function POST(request: Request) {
     issue_type: data.issueType,
     area: data.area,
     trip_month: `${month}-01`,
-    details: details || null,
+    details,
     driver_contact: driverContact,
     evidence_paths: evidencePaths,
     driver_photo_path: driverPhotoPath || null,

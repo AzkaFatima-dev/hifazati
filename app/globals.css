@@ -137,7 +137,9 @@ button:focus-visible, select:focus-visible, input:focus-visible, textarea:focus-
 .form-card label { font-size: 11px; color: #686d78; font-weight: 700; display: flex; flex-direction: column; gap: 9px; }
 .form-card select, .form-card input[type=month], .form-card input[type=tel], .form-card input[name=providerOther], .form-card textarea { width: 100%; background: #fff; border: 1px solid #e7e8eb; border-radius: 7px; color: #525762; padding: 11px 12px; min-height: 42px; font-size: 11px; font-weight: 400; }
 .form-card textarea { resize: vertical; line-height: 1.6; }
-.details-field { margin-top: 21px; }.details-field > span { font-size: 9px; font-weight: 600; letter-spacing: .5px; color: #b2b5bd; }
+.details-field { margin-top: 21px; }
+.form-card .field-label { display: inline; color: #686d78; font-size: 11px; font-weight: 700; }
+.required-mark { color: var(--accent); font-size: 14px; line-height: 0; }
 .field-grid label small { color: #a1a5af; font-size: 9px; font-weight: 500; margin-top: -4px; }
 .form-card .file-field { margin-top: 21px; }
 .file-field > span { color: #b2b5bd; font-size: 9px; font-weight: 600; letter-spacing: .5px; }
