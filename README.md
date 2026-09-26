@@ -2,6 +2,8 @@
 
 A Lahore ride-reporting prototype. Riders can submit a private report, and the public dashboard shows only reviewed, aggregated patterns. The interface uses a light dashboard layout with white cards, a gray background, and muted red accents.
 
+The landing page is at `/`, with a one-time 4.8-second reveal of the mixed Urdu-English logo. The dashboard is at `/dashboard`; `/dashboard?view=report` opens the private report form directly. The animation is skipped when a visitor requests reduced motion.
+
 ## Run locally
 
 ```powershell

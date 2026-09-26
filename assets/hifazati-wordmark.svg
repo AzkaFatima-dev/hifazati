@@ -1,0 +1,13 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1100" height="460" viewBox="430 190 550 230" role="img" aria-label="Hifazati mixed Urdu and English wordmark">
+  <defs>
+    <clipPath id="ti-front"><rect x="515" y="250" width="115" height="43"/></clipPath>
+  </defs>
+  <g transform="translate(700 290) scale(1.35) translate(-700 -290)">
+    <g fill="#252936">
+      <text x="819" y="328" text-anchor="middle" direction="rtl" unicode-bidi="embed" font-family="Arabic Typesetting, Aldhabi, serif" font-size="196">حفا</text>
+      <text x="560" y="328" text-anchor="middle" direction="rtl" unicode-bidi="embed" font-family="Arabic Typesetting, Aldhabi, serif" font-size="196" transform="translate(519 0) scale(2 1) translate(-519 0)">تی</text>
+    </g>
+    <text x="705" y="325" text-anchor="middle" font-family="Georgia, serif" font-size="105" font-weight="500" fill="#b84750">za</text>
+    <text x="560" y="328" text-anchor="middle" direction="rtl" unicode-bidi="embed" font-family="Arabic Typesetting, Aldhabi, serif" font-size="196" fill="#252936" clip-path="url(#ti-front)" transform="translate(519 0) scale(2 1) translate(-519 0)">تی</text>
+  </g>
+</svg>
