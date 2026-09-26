@@ -1,4 +1,4 @@
--- Raahnaama MVP: private incoming reports and a separate public aggregate table.
+-- Hifazati MVP: private incoming reports and a separate public aggregate table.
 -- Run this in Supabase SQL Editor. Do not add public read access to ride_reports.
 
 create table if not exists public.ride_reports (
