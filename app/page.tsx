@@ -51,10 +51,9 @@ export default function Home() {
 
   useEffect(() => {
     if (!supabase) return;
-    const { data } = supabase.auth.onAuthStateChange((event, nextSession) => {
+    const { data } = supabase.auth.onAuthStateChange((_event, nextSession) => {
       setSession(nextSession);
       setAuthLoading(false);
-      if (event === "PASSWORD_RECOVERY") setAuthMode("update");
     });
     return () => data.subscription.unsubscribe();
   }, []);
