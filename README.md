@@ -1,23 +1,28 @@
 # Hifazati (حفاظتی)
 
-A Lahore ride-reporting prototype. Riders can submit a private report, and the public dashboard shows only reviewed, aggregated patterns. The interface uses a light dashboard layout with white cards, a gray background, and muted red accents.
+A Lahore ride-reporting prototype. Riders can submit an anonymous private report with supporting proof. The public dashboard shows only reviewed, aggregated patterns; it contains no fictional reports or individual allegations.
 
-The landing page is at `/`, with a one-time 4.8-second reveal of the mixed Urdu-English logo. The dashboard is at `/dashboard`; `/dashboard?view=report` opens the private report form directly. The animation is skipped when a visitor requests reduced motion.
+The landing page is at `/`. Its mixed Urdu-English logo is revealed over 4.8 seconds, with a replay control and a reduced-motion fallback. The dashboard is at `/dashboard`; `/dashboard?view=report` opens the report form.
 
 ## Run locally
 
 ```powershell
-npm.cmd run dev
+npm.cmd install
+vercel.cmd env run -e development -- npm.cmd run dev
 ```
 
-Open the local URL shown in the terminal. **There is no seeded or fictional report data.** The production Vercel project is connected to a free Supabase database. For local development with that connection, run `vercel.cmd env run -e development -- npm.cmd run dev`. The app does not store reports in browser local storage.
+The app uses a Supabase database provisioned through Vercel. It does not store reports in browser local storage. The browser needs `NEXT_PUBLIC_SUPABASE_URL` and `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY`; server routes need `SUPABASE_URL` and `SUPABASE_SERVICE_ROLE_KEY`. Never expose the service-role key with a `NEXT_PUBLIC_` prefix.
 
-## Database setup
+## Database and auth
 
-The production database is provisioned through the Vercel Supabase integration. [`supabase/schema.sql`](supabase/schema.sql) has been applied. Vercel injects `NEXT_PUBLIC_SUPABASE_URL` and `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY` for the app. If using a separate Supabase project, apply the same schema and set those two variables before deploying.
+For a new Supabase project, apply [`supabase/schema.sql`](supabase/schema.sql), then [`supabase/migrations/20260926_anonymous_evidence.sql`](supabase/migrations/20260926_anonymous_evidence.sql). The migration is already applied to the production project. It creates a private `report-evidence` bucket and changes raw report writes to server-only. Report records include a required driver contact number, 1–3 proof paths, optional driver photo, and an optional service description required when the rider chooses Other. Each proof file may be up to 20 MB; the driver photo may be up to 8 MB.
 
-Riders register and log in with an email address and password through Supabase Auth. For this short demo, Supabase Auth's **Confirm Email** setting is disabled so accounts become usable immediately without an SMTP provider. Email addresses are therefore not verified. Before a public launch, configure a verified SMTP sender, turn Confirm Email back on, set the Auth Site URL to `https://hifazati.vercel.app`, and add that URL to the redirect allow list. Password recovery also requires email delivery and is not offered in this demo.
+The report form requests a short-lived signed upload URL from the server, uploads proof directly to the private bucket, then submits the structured report to `/api/reports`. The server checks the required fields and confirms the files exist before saving the report. Anonymous and signed-in visitors can submit, but neither can read raw reports or proof files. Uploaded files are accessible to project administrators in Supabase for review. A failed or abandoned submission can leave orphaned private files; administrators should remove these periodically.
 
-Only signed-in users can submit to `ride_reports`. Anonymous visitors and signed-in users cannot read or edit raw reports. Review reports in the Supabase dashboard, set accepted reports' `review_status` to `reviewed`, then add only genuinely reviewed groups of at least three to `public_ride_trends`. The public dashboard reads from that separate aggregate table. It never displays free-text descriptions or identifying details.
+Riders may also register and log in with an email address and password through Supabase Auth. For this demo, Supabase Auth's **Confirm Email** setting is disabled so accounts work immediately without SMTP. Email addresses are therefore not verified. Before a public launch, configure a verified SMTP sender, enable Confirm Email, and set the Auth Site URL and redirect allow list to the deployed site. Password recovery requires email delivery and is not offered in this demo.
 
-Use only the Supabase **publishable** key in the frontend. Never add a service-role key to a `NEXT_PUBLIC_` variable. The app asks riders not to include names, phone numbers, number plates, or exact addresses.
+Review reports in the Supabase dashboard, update accepted reports' `review_status` to `reviewed`, then add only genuinely reviewed groups of at least three to `public_ride_trends`. The dashboard reads from that separate aggregate table. It never displays descriptions, driver phone numbers, or uploaded files. User-submitted proof is supporting material, not independent verification of a claim.
+
+## Landing photos
+
+Images are used under the [Unsplash License](https://unsplash.com/license): [Shazaf Zafar's Lahore street](https://unsplash.com/photos/an-alley-way-with-a-car-parked-on-the-side-of-it-bOpkB2fcWWQ), [Nicholas Ng's phone in a car](https://unsplash.com/photos/hand-holding-a-white-smartphone-inside-a-car-aD0ejFwyG0c), and [abdullah shehroz's Lahore road](https://unsplash.com/photos/a-person-riding-a-motorcycle-down-a-street-GiaySwqSUxk).

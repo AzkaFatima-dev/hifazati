@@ -78,7 +78,7 @@ export default function AuthDialog({ mode, onClose, onModeChange, onSignedIn }: 
       <span className="auth-mark">H</span>
       <span className="overline">HIFAZATI ACCOUNT</span>
       <h2 id="auth-title">{heading[mode]}</h2>
-      <p className="auth-intro">{mode === "register" ? "Join the Lahore rider community. Your reports stay private. Password recovery is not available during this demo." : "Sign in to share an experience privately."}</p>
+      <p className="auth-intro">{mode === "register" ? "Create an optional account to use Hifazati. You can also submit a private report without one. Password recovery is not available during this demo." : "Sign in to your Hifazati account. Reports can also be submitted anonymously."}</p>
       <form onSubmit={submit}>
         <label>Email address<input type="email" autoComplete="email" value={email} onChange={(event) => setEmail(event.target.value)} required autoFocus placeholder="you@example.com" /></label>
         <label>Password<input type="password" autoComplete={mode === "login" ? "current-password" : "new-password"} value={password} onChange={(event) => setPassword(event.target.value)} minLength={mode === "login" ? undefined : 8} required placeholder={mode === "login" ? "Enter your password" : "At least 8 characters"} /></label>

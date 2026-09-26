@@ -4,17 +4,14 @@ import { FormEvent, useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import type { Session } from "@supabase/supabase-js";
 import AuthDialog, { type AuthMode } from "../components/AuthDialog";
+import { areas, driverPhotoTypes, evidenceBucket, evidenceTypes, issues, maxDriverPhotoBytes, maxEvidenceBytes, maxEvidenceFiles, providers, type Provider } from "../lib/report-options";
 import { supabase } from "../lib/supabase";
 
 type View = "dashboard" | "report" | "about";
-type Provider = "Uber" | "inDrive" | "Yango" | "Other";
 type Trend = { provider: Provider; issue_type: string; area: string; report_count: number };
 type LoadState = "not-connected" | "loading" | "ready" | "error";
 type IconName = "grid" | "note" | "info" | "arrow" | "shield" | "lock" | "pin" | "check";
 
-const providers: Provider[] = ["Uber", "inDrive", "Yango", "Other"];
-const issues = ["Harassment", "Unsafe driving", "Route concern", "Fare or payment", "Unprofessional conduct", "Other"];
-const areas = ["Gulberg", "DHA", "Johar Town", "Model Town", "Cantt", "Walled City", "Other Lahore"];
 const palette = ["#bb484d", "#d36b70", "#e39b9f", "#edbfc2", "#e8d7d8", "#aeb4bd"];
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
 const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY;
@@ -49,6 +46,7 @@ export default function DashboardClient({ initialView }: { initialView: View }) 
   const [session, setSession] = useState<Session | null>(null);
   const [authLoading, setAuthLoading] = useState(connected);
   const [authMode, setAuthMode] = useState<AuthMode | null>(null);
+  const [selectedProvider, setSelectedProvider] = useState("");
 
   useEffect(() => {
     if (!supabase) return;
@@ -102,28 +100,57 @@ export default function DashboardClient({ initialView }: { initialView: View }) 
 
   async function submitReport(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
-    if (!supabase || !session) {
-      setAuthMode("login");
-      return;
-    }
+    if (!supabase) return;
     const formElement = event.currentTarget;
     const form = new FormData(formElement);
+    const evidenceFiles = form.getAll("evidence").filter((value): value is File => value instanceof File && value.size > 0);
+    const driverPhoto = form.get("driverPhoto");
+    const photoFile = driverPhoto instanceof File && driverPhoto.size > 0 ? driverPhoto : null;
+    if (evidenceFiles.length < 1 || evidenceFiles.length > maxEvidenceFiles ||
+        evidenceFiles.some((file) => !evidenceTypes.has(file.type) || file.size > maxEvidenceBytes) ||
+        (photoFile && (!driverPhotoTypes.has(photoFile.type) || photoFile.size > maxDriverPhotoBytes))) {
+      setFormError("Add 1–3 proof files (up to 20 MB each). The optional driver photo must be an image under 8 MB.");
+      return;
+    }
     setSubmitting(true);
     setFormMessage("");
     setFormError("");
     try {
-      const { error } = await supabase.from("ride_reports").insert({
-        provider: String(form.get("provider")),
-        issue_type: String(form.get("issue")),
-        area: String(form.get("area")),
-        trip_month: `${String(form.get("month"))}-01`,
-        details: String(form.get("details") || "").trim() || null,
+      const reportId = crypto.randomUUID();
+      async function uploadFile(file: File, kind: "evidence" | "driver-photo") {
+        const response = await fetch("/api/reports/upload-url", {
+          method: "POST", headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ reportId, kind, contentType: file.type, size: file.size }),
+        });
+        const prepared = await response.json() as { path?: string; token?: string; error?: string };
+        if (!response.ok || !prepared.path || !prepared.token) throw new Error(prepared.error || "Could not prepare the upload.");
+        const { error } = await supabase!.storage.from(evidenceBucket).uploadToSignedUrl(prepared.path, prepared.token, file, { contentType: file.type });
+        if (error) throw new Error("A proof file could not be uploaded. Please try again.");
+        return prepared.path;
+      }
+      const evidencePaths = await Promise.all(evidenceFiles.map((file) => uploadFile(file, "evidence")));
+      const driverPhotoPath = photoFile ? await uploadFile(photoFile, "driver-photo") : null;
+      const response = await fetch("/api/reports", {
+        method: "POST", headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          reportId,
+          provider: String(form.get("provider")),
+          providerOther: String(form.get("providerOther") || ""),
+          issueType: String(form.get("issue")),
+          area: String(form.get("area")),
+          tripMonth: String(form.get("month")),
+          details: String(form.get("details") || ""),
+          driverContact: String(form.get("driverContact") || ""),
+          evidencePaths, driverPhotoPath,
+        }),
       });
-      if (error) throw error;
+      const result = await response.json() as { error?: string };
+      if (!response.ok) throw new Error(result.error || "Could not save the report.");
       formElement.reset();
-      setFormMessage("Your report was sent privately for review. It will not appear as an individual public post.");
-    } catch {
-      setFormError("We could not send your report. Please try again later.");
+      setSelectedProvider("");
+      setFormMessage("Your report and proof were sent privately for review. Your identity and the driver's details will not appear publicly.");
+    } catch (caught) {
+      setFormError(caught instanceof Error ? caught.message : "We could not send your report. Please try again later.");
     } finally {
       setSubmitting(false);
     }
@@ -140,7 +167,7 @@ export default function DashboardClient({ initialView }: { initialView: View }) 
           <button className={view === "about" ? "side-link active" : "side-link"} onClick={() => openView("about")}><Icon name="info" /> How it works</button>
         </nav>
       </div>
-      <div className="sidebar-bottom"><div className="sidebar-privacy"><Icon name="lock" size={17} /><span>Private stories.<br /><b>Public patterns.</b></span></div><span>MADE FOR LAHORE RIDERS</span></div>
+      <div className="sidebar-bottom"><div className="sidebar-privacy"><Icon name="lock" size={17} /><span>Private stories.<br /><b>Public patterns.</b></span></div></div>
     </aside>
 
     <div className="main-area">
@@ -168,9 +195,36 @@ export default function DashboardClient({ initialView }: { initialView: View }) 
           </section>
         </>}
 
-        {view === "report" && connected && !session && <div className="login-notice"><Icon name="lock" size={21} /><div><strong>{authLoading ? "Checking your account…" : "Log in to send a private report"}</strong><p>{authLoading ? "Your saved session is loading." : "Register with your email and password, or log in to an existing account."}</p></div>{!authLoading && <div className="login-notice-actions"><button type="button" className="account-button" onClick={() => setAuthMode("login")}>Log in</button><button type="button" className="primary-button" onClick={() => setAuthMode("register")}>Register</button></div>}</div>}
 
-        {view === "report" && <><div className="page-heading"><div><span className="overline">PRIVATE INCIDENT REPORT</span><h1>Your experience <em>matters.</em></h1><p>Share what happened during a Lahore ride. Reports are private until grouped patterns are reviewed.</p></div></div><div className="report-layout"><section className="card form-card"><div className="card-heading"><div><h3>About the ride</h3><p>Do not include names, phone numbers, plates, or exact addresses.</p></div><span className="card-tag">PRIVATE SUBMISSION</span></div>{!connected && <div className="form-offline"><Icon name="info" size={19} /><span>Reporting is not open yet. The form will become available when secure storage is connected.</span></div>}<form onSubmit={submitReport}><fieldset disabled={!connected || authLoading || !session || submitting}><div className="field-grid"><label>Ride service<select name="provider" required defaultValue=""><option value="" disabled>Select a service</option>{providers.map((provider) => <option key={provider}>{provider}</option>)}</select></label><label>What happened?<select name="issue" required defaultValue=""><option value="" disabled>Choose a topic</option>{issues.map((issue) => <option key={issue}>{issue}</option>)}</select></label><label>Broad area<select name="area" required defaultValue=""><option value="" disabled>Select an area</option>{areas.map((area) => <option key={area}>{area}</option>)}</select></label><label>Month of ride<input name="month" type="month" required max={new Date().toISOString().slice(0, 7)} /></label></div><label className="details-field">More context <span>OPTIONAL · 280 CHARACTERS MAX</span><textarea name="details" maxLength={280} rows={4} placeholder="Describe the issue without identifying anyone." /></label><label className="consent"><input type="checkbox" required /><span>I understand that reports are user-submitted and reviewed before any group count is published.</span></label>{formMessage && <div className="form-feedback success" role="status">{formMessage}</div>}{formError && <div className="form-feedback error" role="alert">{formError}</div>}<button className="primary-button submit-button" type="submit">{submitting ? "Sending…" : "Send report privately"}<Icon name="arrow" size={17} /></button></fieldset></form></section><aside className="report-side"><div className="card trust-card"><span className="trust-symbol"><Icon name="lock" size={23} /></span><h3>Privacy comes first.</h3><p>Your individual report is never posted publicly. The dashboard shows grouped counts only after review.</p><div className="trust-row"><Icon name="check" size={17} /> No public driver profiles</div><div className="trust-row"><Icon name="check" size={17} /> No exact trip locations</div><div className="trust-row"><Icon name="check" size={17} /> No public descriptions</div></div><p className="emergency-note">Hifazati is not an emergency service. If you are in immediate danger, contact someone you trust or local emergency services.</p></aside></div></>}
+        {view === "report" && <>
+          <div className="page-heading"><div><span className="overline">PRIVATE INCIDENT REPORT</span><h1>Your experience <em>matters.</em></h1><p>No account is needed. Your report, driver details, and proof files stay private while they are reviewed.</p></div></div>
+          <div className="report-layout">
+            <section className="card form-card">
+              <div className="card-heading"><div><h3>About the ride</h3><p>Share only what is needed to understand the incident. Do not include your own contact details or exact addresses.</p></div><span className="card-tag">PRIVATE SUBMISSION</span></div>
+              {!connected && <div className="form-offline"><Icon name="info" size={19} /><span>Reporting is temporarily unavailable.</span></div>}
+              <form onSubmit={submitReport}>
+                <fieldset disabled={!connected || submitting}>
+                  <div className="field-grid">
+                    <label>Ride service<select name="provider" required value={selectedProvider} onChange={(event) => setSelectedProvider(event.target.value)}><option value="" disabled>Select a service</option>{providers.map((provider) => <option key={provider}>{provider}</option>)}</select></label>
+                    <label>What happened?<select name="issue" required defaultValue=""><option value="" disabled>Choose a topic</option>{issues.map((issue) => <option key={issue}>{issue}</option>)}</select></label>
+                    <label>Broad area<select name="area" required defaultValue=""><option value="" disabled>Select an area</option>{areas.map((area) => <option key={area}>{area}</option>)}</select></label>
+                    <label>Month of ride<input name="month" type="month" required max={new Date().toISOString().slice(0, 7)} /></label>
+                    <label>Driver contact number <small>Private to reviewers</small><input name="driverContact" type="tel" inputMode="tel" required minLength={9} maxLength={24} placeholder="03XX XXXXXXX or +92…" /></label>
+                    {selectedProvider === "Other" && <label>Describe the service or local ride<input name="providerOther" required minLength={3} maxLength={160} placeholder="E.g. local rickshaw from a nearby stand" /></label>}
+                  </div>
+                  <label className="details-field">What happened? <span>OPTIONAL · 2000 CHARACTERS MAX</span><textarea name="details" maxLength={2000} rows={5} placeholder="Describe the incident without sharing your own identifying details." /></label>
+                  <label className="file-field">Proof of the incident <span>REQUIRED · 1–3 FILES · UP TO 20 MB EACH</span><input name="evidence" type="file" multiple required accept=".jpg,.jpeg,.png,.webp,.heic,.heif,.mp3,.m4a,.wav,.ogg,.webm,.mp4,.mov,.pdf" /><small>Images, audio messages, short videos, or PDF documents. Files are never shown publicly.</small></label>
+                  <label className="file-field">Driver photo <span>OPTIONAL · UP TO 8 MB</span><input name="driverPhoto" type="file" accept="image/jpeg,image/png,image/webp,image/heic,image/heif" /><small>Only add a photo if you have one. It stays private with the report.</small></label>
+                  <label className="consent"><input type="checkbox" required /><span>I understand this is a private, user-submitted claim. Only reviewed group counts may appear publicly.</span></label>
+                  {formMessage && <div className="form-feedback success" role="status">{formMessage}</div>}
+                  {formError && <div className="form-feedback error" role="alert">{formError}</div>}
+                  <button className="primary-button submit-button" type="submit">{submitting ? "Uploading proof…" : "Send report privately"}<Icon name="arrow" size={17} /></button>
+                </fieldset>
+              </form>
+            </section>
+            <aside className="report-side"><div className="card trust-card"><span className="trust-symbol"><Icon name="lock" size={23} /></span><h3>Privacy comes first.</h3><p>Anonymous reports are welcome. Your proof files and the driver&apos;s number are stored privately for review.</p><div className="trust-row"><Icon name="check" size={17} /> No public driver profiles</div><div className="trust-row"><Icon name="check" size={17} /> No public phone numbers or photos</div><div className="trust-row"><Icon name="check" size={17} /> No public descriptions</div></div><p className="emergency-note">Hifazati is not an emergency service. If you are in immediate danger, contact someone you trust or local emergency services.</p></aside>
+          </div>
+        </>}
 
         {view === "about" && <><div className="page-heading"><div><span className="overline">ABOUT HIFAZATI</span><h1>Safer conversations<br /><em>start here.</em></h1><p>A private place to report a difficult ride and a public view of reviewed patterns in Lahore.</p></div><button className="primary-button" onClick={() => openView("report")}>Share an experience <Icon name="arrow" size={17} /></button></div><div className="about-grid"><div className="card about-card"><span>01 / PRIVATE</span><Icon name="note" size={30} /><h3>Tell us what happened</h3><p>Reports are structured around service, concern, broad area, and month. Extra context stays private.</p></div><div className="card about-card"><span>02 / REVIEWED</span><Icon name="shield" size={30} /><h3>Look for patterns</h3><p>Reports are reviewed before being counted. Individual claims are not posted on the site.</p></div><div className="card about-card"><span>03 / SHARED</span><Icon name="grid" size={30} /><h3>Inform the community</h3><p>Only groups of at least three appear publicly, so people can see themes without identifying riders.</p></div></div></>}
       </main>
