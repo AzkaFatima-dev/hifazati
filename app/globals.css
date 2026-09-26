@@ -258,6 +258,7 @@ button:focus-visible, select:focus-visible, input:focus-visible, textarea:focus-
 .landing-section-heading p { margin: 0; color: #8a8f9b; font-size: 13px; line-height: 1.7; }
 .landing-how-body { margin-top: 37px; display: grid; grid-template-columns: minmax(0, .85fr) minmax(0, 1.15fr); gap: 28px; }
 .landing-how-photo { min-height: 500px; border-radius: 14px; }
+.landing-how-photo img { object-position: center 38%; }
 .landing-step-grid { display: grid; grid-template-columns: 1fr; gap: 12px; }
 .landing-step { min-height: 0; padding: 23px 27px; border: 1px solid #ececef; border-radius: 12px; background: #fdfdfd; }
 .landing-step > span { color: var(--accent); font-size: 12px; font-weight: 800; letter-spacing: 1px; }

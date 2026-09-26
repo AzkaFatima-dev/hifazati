@@ -69,7 +69,7 @@ export default function LandingPage() {
       <section className="landing-how" id="how-it-works" aria-labelledby="how-title">
         <div className="landing-section-heading"><span className="landing-eyebrow">THE IDEA</span><h2 id="how-title">A clearer picture starts with one report.</h2><p>No public driver profiles. No exact trip locations. Just a careful way to see what riders are experiencing.</p></div>
         <div className="landing-how-body">
-          <figure className="landing-how-photo"><Image src="/images/phone-car-alt.jpg" alt="Passenger holding a phone inside a car" fill sizes="(max-width: 760px) 100vw, 40vw" /></figure>
+          <figure className="landing-how-photo"><Image src="/images/ride-driver-passenger.png" alt="View from the back seat of a driver at the wheel and a woman passenger inside the car" fill sizes="(max-width: 760px) 100vw, 40vw" /></figure>
           <div className="landing-step-grid">
             {steps.map((step) => <article className="landing-step" key={step.number}><span>{step.number}</span><h3>{step.title}</h3><p>{step.text}</p></article>)}
           </div>

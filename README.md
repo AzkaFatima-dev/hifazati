@@ -27,4 +27,4 @@ Review reports in the Supabase dashboard, update accepted reports' `review_statu
 
 ## Landing photos
 
-Images are used under the [Unsplash License](https://unsplash.com/license): [Shazaf Zafar's Lahore street](https://unsplash.com/photos/an-alley-way-with-a-car-parked-on-the-side-of-it-bOpkB2fcWWQ), [Nicholas Ng's phone in a car](https://unsplash.com/photos/hand-holding-a-white-smartphone-inside-a-car-aD0ejFwyG0c), and [abdullah shehroz's Lahore road](https://unsplash.com/photos/a-person-riding-a-motorcycle-down-a-street-GiaySwqSUxk).
+The driver-and-passenger image in “The Idea” section was generated for Hifazati. The other images are used under the [Unsplash License](https://unsplash.com/license): [Shazaf Zafar's Lahore street](https://unsplash.com/photos/an-alley-way-with-a-car-parked-on-the-side-of-it-bOpkB2fcWWQ) and [abdullah shehroz's Lahore road](https://unsplash.com/photos/a-person-riding-a-motorcycle-down-a-street-GiaySwqSUxk).
