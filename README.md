@@ -1,4 +1,4 @@
-# Raasta — Lahore ride experiences
+# Raahnaama (راہ نامہ) — Lahore ride experiences
 
 Hackathon prototype for privately submitting rideshare incident reports and showing aggregated community patterns.
 
@@ -29,4 +29,4 @@ Do not put a Supabase secret or service-role key in `.env.local` or frontend cod
 
 ## Deploy
 
-Deploy the `ridesafe-lahore` folder as a Next.js project on Vercel. If using Supabase mode, add the two `.env.local` values as Vercel environment variables, then redeploy. Until someone reviews reports and updates the aggregate table, the shared dashboard will be empty by design.
+Deploy this folder as a Next.js project on Vercel. If using Supabase mode, add the two `.env.local` values as Vercel environment variables, then redeploy. Until someone reviews reports and updates the aggregate table, the shared dashboard will be empty by design.

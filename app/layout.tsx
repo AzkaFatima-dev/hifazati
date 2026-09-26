@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import "./globals.css";
 
 export const metadata: Metadata = {
-  title: "Raasta — Lahore ride experiences",
+  title: "Raahnaama — Lahore ride experiences",
   description: "Share ride experiences privately and explore community patterns across Lahore.",
 };
 

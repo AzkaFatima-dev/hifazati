@@ -113,7 +113,7 @@ export default function Home() {
   return (
     <main>
       <header className="topbar">
-        <a className="brand" href="#top" onClick={() => setActiveTab("pulse")}><Mark>R</Mark><span>raasta<span className="brand-dot">.</span></span></a>
+        <a className="brand" href="#top" onClick={() => setActiveTab("pulse")}><Mark>R</Mark><span>raahnaama<span className="brand-dot">.</span></span></a>
         <nav className="desktop-nav" aria-label="Main navigation">
           <button className={activeTab === "pulse" ? "nav-link active" : "nav-link"} onClick={() => setActiveTab("pulse")}>Community pulse</button>
           <button className={activeTab === "report" ? "nav-link active" : "nav-link"} onClick={() => { setActiveTab("report"); document.getElementById("report")?.scrollIntoView({ behavior: "smooth" }); }}>Report an issue</button>
@@ -124,7 +124,7 @@ export default function Home() {
       <div id="top" className="page-shell">
         <section className="hero">
           <div className="hero-copy">
-            <div className="eyebrow"><span className="live-dot" /> MADE FOR LAHORE RIDERS</div>
+            <div className="eyebrow"><span className="live-dot" /> MADE FOR LAHORE RIDERS <span className="urdu-word" lang="ur">راہ نامہ</span></div>
             <h1>Make every ride<br />a <em>little safer.</em></h1>
             <p className="hero-text">A community-powered view of ride experiences across Lahore. Share what happened. Help the next person make an informed choice.</p>
             <div className="hero-actions">
@@ -202,7 +202,7 @@ export default function Home() {
             {success && <div className="form-message success-message" role="status">✓&nbsp; {success}</div>}
             {error && <div className="form-message error-message" role="alert">{error}</div>}
             <button className="button button-green submit-button" disabled={submitting}>{submitting ? "Sending…" : "Send report privately"}<span aria-hidden="true">↗</span></button>
-            <p className="form-disclaimer">Raasta is not an emergency service. If you are in immediate danger, contact someone you trust or local emergency services.</p>
+            <p className="form-disclaimer">Raahnaama is not an emergency service. If you are in immediate danger, contact someone you trust or local emergency services.</p>
           </form>
         </section>
 
@@ -210,7 +210,7 @@ export default function Home() {
           <div className="eyebrow muted">SIMPLE BY DESIGN</div><h2>Every report helps<br />build the bigger picture.</h2>
           <div className="how-steps"><article><span>01</span><h3>Share privately</h3><p>Choose a service, a topic, and a broad area. No account needed.</p></article><article><span>02</span><h3>We review patterns</h3><p>Reports are checked and grouped. We don’t publish individual stories.</p></article><article><span>03</span><h3>Ride informed</h3><p>See community signals and decide what feels right for your next trip.</p></article></div>
         </section>
-        <footer className="footer"><a className="brand" href="#top"><Mark>R</Mark><span>raasta<span className="brand-dot">.</span></span></a><span>Built for Lahore, with care.</span><a href="#report" onClick={() => setActiveTab("report")}>Share an experience ↑</a></footer>
+        <footer className="footer"><a className="brand" href="#top"><Mark>R</Mark><span>raahnaama<span className="brand-dot">.</span></span></a><span>Built for Lahore, with care.</span><a href="#report" onClick={() => setActiveTab("report")}>Share an experience ↑</a></footer>
       </div>
     </main>
   );
