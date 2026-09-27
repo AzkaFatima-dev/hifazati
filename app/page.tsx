@@ -1,11 +1,9 @@
 "use client";
 
-import { useEffect, useState } from "react";
-import type { Session } from "@supabase/supabase-js";
+import { useState } from "react";
+import { SignInButton, SignUpButton, UserButton, useUser } from "@clerk/nextjs";
 import Image from "next/image";
 import Link from "next/link";
-import AuthDialog, { type AuthMode } from "./components/AuthDialog";
-import { supabase } from "./lib/supabase";
 
 const steps = [
   { number: "01", title: "Share privately", text: "Choose a service and add the driver's contact number and at least one proof file. No account is needed." },
@@ -14,17 +12,8 @@ const steps = [
 ];
 
 export default function LandingPage() {
-  const [session, setSession] = useState<Session | null>(null);
-  const [authMode, setAuthMode] = useState<AuthMode | null>(null);
+  const { user, isLoaded } = useUser();
   const [logoRun, setLogoRun] = useState(0);
-
-  useEffect(() => {
-    if (!supabase) return;
-    const client = supabase;
-    client.auth.getSession().then(({ data }) => setSession(data.session));
-    const { data } = client.auth.onAuthStateChange((_event, nextSession) => setSession(nextSession));
-    return () => data.subscription.unsubscribe();
-  }, []);
 
   return <div className="landing-shell">
     <header className="landing-header">
@@ -36,10 +25,10 @@ export default function LandingPage() {
         <Link href="/dashboard">Dashboard</Link>
       </nav>
       <div className="landing-account">
-        {session ? <Link href="/dashboard" className="landing-account-link">My dashboard</Link> : <>
-          <button type="button" className="landing-login" onClick={() => setAuthMode("login")}>Log in</button>
-          <button type="button" className="landing-register" onClick={() => setAuthMode("register")}>Register <span aria-hidden="true">↗</span></button>
-        </>}
+        {isLoaded && (user ? <><Link href="/dashboard" className="landing-account-link">My dashboard</Link><UserButton /></> : <>
+          <SignInButton mode="modal"><button type="button" className="landing-login">Log in</button></SignInButton>
+          <SignUpButton mode="modal"><button type="button" className="landing-register">Register <span aria-hidden="true">↗</span></button></SignUpButton>
+        </>)}
       </div>
     </header>
 
@@ -80,6 +69,5 @@ export default function LandingPage() {
     </main>
 
     <footer className="landing-footer"><span>© {new Date().getFullYear()} Hifazati</span><span>For Lahore riders · Not an emergency service</span></footer>
-    {authMode && <AuthDialog mode={authMode} onClose={() => setAuthMode(null)} onModeChange={setAuthMode} onSignedIn={() => setAuthMode(null)} />}
   </div>;
 }

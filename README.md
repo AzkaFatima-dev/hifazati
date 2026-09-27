@@ -11,7 +11,7 @@ npm.cmd install
 vercel.cmd env run -e development -- npm.cmd run dev
 ```
 
-The app uses a Supabase database provisioned through Vercel. It does not store reports in browser local storage. The browser needs `NEXT_PUBLIC_SUPABASE_URL` and `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY`; server routes need `SUPABASE_URL` and `SUPABASE_SERVICE_ROLE_KEY`. Never expose the service-role key with a `NEXT_PUBLIC_` prefix.
+The app uses a Supabase database provisioned through Vercel. It does not store reports in browser local storage. The browser needs `NEXT_PUBLIC_SUPABASE_URL` and `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY`; report routes need `SUPABASE_URL` and `SUPABASE_SERVICE_ROLE_KEY`. Clerk uses `NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY` in the browser and `CLERK_SECRET_KEY` on the server. Never put either secret key in a `NEXT_PUBLIC_` variable.
 
 ## Database and auth
 
@@ -21,7 +21,7 @@ The area field suggests common Lahore neighborhoods and accepts any other Lahore
 
 The report form requests a short-lived signed upload URL from the server, uploads proof directly to the private bucket, then submits the structured report to `/api/reports`. The server checks the required fields and confirms the files exist before saving the report. Anonymous and signed-in visitors can submit, but neither can read raw reports or proof files. Uploaded files are accessible to project administrators in Supabase for review. A failed or abandoned submission can leave orphaned private files; administrators should remove these periodically.
 
-Riders may also register and log in with an email address and password through Supabase Auth. For this demo, Supabase Auth's **Confirm Email** setting is disabled so accounts work immediately without SMTP. Email addresses are therefore not verified. Before a public launch, configure a verified SMTP sender, enable Confirm Email, and set the Auth Site URL and redirect allow list to the deployed site. Password recovery requires email delivery and is not offered in this demo.
+Riders register, log in, and manage accounts with Clerk. Anonymous reports remain available without an account; proof storage and reviewed trend data remain on Supabase. The previous Supabase Auth user cannot use that password with Clerk and needs to register in Clerk. Reports were never linked to Supabase user IDs. Clerk sign-up and email verification behavior follows the configured Clerk instance settings. The current public demo uses Clerk development keys on a `vercel.app` domain; before a production launch, use an owned domain and Clerk production keys.
 
 Review reports in the Supabase dashboard, update accepted reports' `review_status` to `reviewed`, then add only genuinely reviewed groups of at least three to `public_ride_trends`. The dashboard reads from that separate aggregate table. It never displays descriptions, driver phone numbers, or uploaded files. User-submitted proof is supporting material, not independent verification of a claim.
 

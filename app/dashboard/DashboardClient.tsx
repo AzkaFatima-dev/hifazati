@@ -2,8 +2,7 @@
 
 import { FormEvent, useEffect, useMemo, useState } from "react";
 import Link from "next/link";
-import type { Session } from "@supabase/supabase-js";
-import AuthDialog, { type AuthMode } from "../components/AuthDialog";
+import { SignInButton, SignUpButton, UserButton, useUser } from "@clerk/nextjs";
 import { areas, driverPhotoTypes, evidenceBucket, evidenceTypes, issues, maxDriverPhotoBytes, maxEvidenceBytes, maxEvidenceFiles, providers, type Provider } from "../lib/report-options";
 import { supabase } from "../lib/supabase";
 
@@ -43,19 +42,8 @@ export default function DashboardClient({ initialView }: { initialView: View }) 
   const [submitting, setSubmitting] = useState(false);
   const [formMessage, setFormMessage] = useState("");
   const [formError, setFormError] = useState("");
-  const [session, setSession] = useState<Session | null>(null);
-  const [authLoading, setAuthLoading] = useState(connected);
-  const [authMode, setAuthMode] = useState<AuthMode | null>(null);
+  const { user, isLoaded } = useUser();
   const [selectedProvider, setSelectedProvider] = useState("");
-
-  useEffect(() => {
-    if (!supabase) return;
-    const { data } = supabase.auth.onAuthStateChange((_event, nextSession) => {
-      setSession(nextSession);
-      setAuthLoading(false);
-    });
-    return () => data.subscription.unsubscribe();
-  }, []);
 
   useEffect(() => {
     if (!connected) return;
@@ -85,17 +73,6 @@ export default function DashboardClient({ initialView }: { initialView: View }) 
   function openView(next: View) {
     setView(next);
     window.scrollTo({ top: 0, behavior: "smooth" });
-  }
-
-  async function signOut() {
-    if (!supabase) return;
-    const { error } = await supabase.auth.signOut();
-    if (error) setFormError("Could not log out. Please try again.");
-    else {
-      setSession(null);
-      setFormMessage("");
-      setFormError("");
-    }
   }
 
   async function submitReport(event: FormEvent<HTMLFormElement>) {
@@ -171,7 +148,7 @@ export default function DashboardClient({ initialView }: { initialView: View }) 
     </aside>
 
     <div className="main-area">
-      <header className="topbar"><div className="crumb"><span>Hifazati</span><span className="crumb-divider">/</span><b>{view === "dashboard" ? "Dashboard" : view === "report" ? "Share a report" : "How it works"}</b></div><div className="topbar-right"><span className="location-pill"><Icon name="pin" size={15} /> Lahore, Pakistan</span>{session ? <><span className="account-email" title={session.user.email}>{session.user.email}</span><button type="button" className="account-button" onClick={signOut}>Log out</button></> : !authLoading && connected && <><button type="button" className="account-button" onClick={() => setAuthMode("login")}>Log in</button><button type="button" className="account-button register-button" onClick={() => setAuthMode("register")}>Register</button></>}</div></header>
+      <header className="topbar"><div className="crumb"><span>Hifazati</span><span className="crumb-divider">/</span><b>{view === "dashboard" ? "Dashboard" : view === "report" ? "Share a report" : "How it works"}</b></div><div className="topbar-right"><span className="location-pill"><Icon name="pin" size={15} /> Lahore, Pakistan</span>{isLoaded && (user ? <><span className="account-email" title={user.primaryEmailAddress?.emailAddress}>{user.primaryEmailAddress?.emailAddress}</span><UserButton /></> : <><SignInButton mode="modal"><button type="button" className="account-button">Log in</button></SignInButton><SignUpButton mode="modal"><button type="button" className="account-button register-button">Register</button></SignUpButton></>)}</div></header>
       <main className="content">
         {view === "dashboard" && <>
           <div className="page-heading"><div><span className="overline">COMMUNITY SAFETY DASHBOARD</span><h1>Ride experiences, <em>made visible.</em></h1><p>Reviewed patterns from riders in Lahore. Individual reports stay private.</p></div><button className="primary-button" onClick={() => openView("report")}>Share an experience <Icon name="arrow" size={17} /></button></div>
@@ -231,6 +208,5 @@ export default function DashboardClient({ initialView }: { initialView: View }) 
       </main>
       <footer className="app-footer"><span>© {new Date().getFullYear()} Hifazati · حفاظتی</span><span>Built for Lahore riders</span></footer>
     </div>
-    {authMode && <AuthDialog mode={authMode} onClose={() => setAuthMode(null)} onModeChange={setAuthMode} onSignedIn={() => setAuthMode(null)} />}
   </div>;
 }
