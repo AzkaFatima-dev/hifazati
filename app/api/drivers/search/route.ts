@@ -32,8 +32,8 @@ export async function POST(request: Request) {
     key = normalizeDriverPhone(trimmed);
   } else if (method === "name") {
     key = normalizeDriverName(value);
-    if (key.length < 4 || key.length > 100 || !key.includes(" ") || /[\u0000-\u001f\u007f]/u.test(key)) {
-      return reply({ error: "Enter the driver's full name." }, 400);
+    if (key.length < 2 || key.length > 100 || /[\u0000-\u001f\u007f]/u.test(key)) {
+      return reply({ error: "Enter the driver's name as shown by the ride service." }, 400);
     }
     column = "driver_name_key";
   } else if (method === "photo") {

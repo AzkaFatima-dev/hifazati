@@ -38,9 +38,9 @@ export async function POST(request: Request) {
       !isChoice(data.provider, providers) || !isChoice(data.issueType, issues) ||
       area.length < 2 || area.length > 80 || !/[\p{L}\p{N}]/u.test(area) || /[\u0000-\u001f\u007f]/u.test(area) ||
       (data.provider === "Other" && (providerOther.length < 3 || providerOther.length > 160)) ||
-      (driverContact !== "" && (!/^[+0-9() -]{9,24}$/.test(driverContact) ||
-        !/^\d{9,15}$/.test(driverContact.replace(/\D/g, "")))) ||
-      (driverName !== "" && (driverName.length < 2 || driverName.length > 100 || /[\u0000-\u001f\u007f]/u.test(driverName))) ||
+      !/^[+0-9() -]{9,24}$/.test(driverContact) ||
+      !/^\d{9,15}$/.test(driverContact.replace(/\D/g, "")) ||
+      driverName.length < 2 || driverName.length > 100 || /[\u0000-\u001f\u007f]/u.test(driverName) ||
       details.length < 1 || details.length > 2000 ||
       (month !== "" && (!/^\d{4}-(0[1-9]|1[0-2])$/.test(month) ||
         `${month}-01` > new Date().toISOString().slice(0, 10))) ||
@@ -81,10 +81,10 @@ export async function POST(request: Request) {
     area,
     trip_month: month ? `${month}-01` : null,
     details,
-    driver_name: driverName || null,
-    driver_name_key: driverName ? normalizeDriverName(driverName) : null,
-    driver_contact: driverContact || null,
-    driver_phone_key: driverContact ? normalizeDriverPhone(driverContact) : null,
+    driver_name: driverName,
+    driver_name_key: normalizeDriverName(driverName),
+    driver_contact: driverContact,
+    driver_phone_key: normalizeDriverPhone(driverContact),
     evidence_paths: evidencePaths,
     driver_photo_path: driverPhotoPath || null,
     driver_photo_sha256: driverPhotoSha256,
