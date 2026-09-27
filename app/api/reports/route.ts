@@ -29,17 +29,17 @@ export async function POST(request: Request) {
   const area = typeof data.area === "string" ? data.area.trim().replace(/\s+/g, " ") : "";
   const evidencePaths = data.evidencePaths;
   const driverPhotoPath = data.driverPhotoPath;
-  const month = data.tripMonth;
+  const month = typeof data.tripMonth === "string" ? data.tripMonth.trim() : "";
 
   if (typeof reportId !== "string" || !uuidPattern.test(reportId) ||
       !isChoice(data.provider, providers) || !isChoice(data.issueType, issues) ||
       area.length < 2 || area.length > 80 || !/[\p{L}\p{N}]/u.test(area) || /[\u0000-\u001f\u007f]/u.test(area) ||
       (data.provider === "Other" && (providerOther.length < 3 || providerOther.length > 160)) ||
-      !/^[+0-9() -]{9,24}$/.test(driverContact) ||
-      !/^\d{9,15}$/.test(driverContact.replace(/\D/g, "")) ||
+      (driverContact !== "" && (!/^[+0-9() -]{9,24}$/.test(driverContact) ||
+        !/^\d{9,15}$/.test(driverContact.replace(/\D/g, "")))) ||
       details.length < 1 || details.length > 2000 ||
-      typeof month !== "string" || !/^\d{4}-(0[1-9]|1[0-2])$/.test(month) ||
-      `${month}-01` > new Date().toISOString().slice(0, 10) ||
+      (month !== "" && (!/^\d{4}-(0[1-9]|1[0-2])$/.test(month) ||
+        `${month}-01` > new Date().toISOString().slice(0, 10))) ||
       !Array.isArray(evidencePaths) || evidencePaths.length < 1 || evidencePaths.length > maxEvidenceFiles ||
       !evidencePaths.every((path) => typeof path === "string") ||
       (driverPhotoPath !== null && driverPhotoPath !== undefined && typeof driverPhotoPath !== "string")) {
@@ -68,9 +68,9 @@ export async function POST(request: Request) {
     provider_other: data.provider === "Other" ? providerOther : null,
     issue_type: data.issueType,
     area,
-    trip_month: `${month}-01`,
+    trip_month: month ? `${month}-01` : null,
     details,
-    driver_contact: driverContact,
+    driver_contact: driverContact || null,
     evidence_paths: evidencePaths,
     driver_photo_path: driverPhotoPath || null,
   });

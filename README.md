@@ -15,7 +15,7 @@ The app uses a Supabase database provisioned through Vercel. It does not store r
 
 ## Database and auth
 
-For a new Supabase project, apply [`supabase/schema.sql`](supabase/schema.sql), then the migrations in [`supabase/migrations`](supabase/migrations) in filename order. All migrations are applied to production. They create a private `report-evidence` bucket and change raw report writes to server-only. Report records require a written account, Lahore area, driver contact number, and 1–3 proof paths. The driver photo is the only optional form field; a service description is required when the rider chooses Other. Each proof file may be up to 20 MB; the driver photo may be up to 8 MB.
+For a new Supabase project, apply [`supabase/schema.sql`](supabase/schema.sql), then the migrations in [`supabase/migrations`](supabase/migrations) in filename order. All migrations are applied to production. They create a private `report-evidence` bucket and change raw report writes to server-only. Report records require a written account, Lahore area, and 1–3 proof paths. The ride month, driver contact number, and driver photo are optional; a service description is required when the rider chooses Other. Each proof file may be up to 20 MB; the driver photo may be up to 8 MB.
 
 The area field suggests common Lahore neighborhoods and accepts any other Lahore locality typed by the rider. The suggestions are not an exhaustive administrative list; the [Lahore district union-council list](https://lahore.punjab.gov.pk/constituencies) alone contains 274 entries. Riders should enter a neighborhood rather than an exact address. Reviewers can standardize spelling before publishing grouped trends.
 

@@ -11,7 +11,7 @@ create table if not exists public.ride_reports (
   area text not null check (area in (
     'Gulberg', 'DHA', 'Johar Town', 'Model Town', 'Cantt', 'Walled City', 'Other Lahore'
   )),
-  trip_month date not null check (extract(day from trip_month) = 1),
+  trip_month date check (trip_month is null or extract(day from trip_month) = 1),
   details text check (details is null or char_length(details) <= 280),
   review_status text not null default 'pending' check (review_status in ('pending', 'reviewed', 'rejected')),
   created_at timestamptz not null default now()

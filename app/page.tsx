@@ -6,7 +6,7 @@ import Image from "next/image";
 import Link from "next/link";
 
 const steps = [
-  { number: "01", title: "Share privately", text: "Choose a service and add the driver's contact number and at least one proof file. No account is needed." },
+  { number: "01", title: "Share privately", text: "Choose a service and add at least one proof file. A driver's number is helpful if you have it. No account is needed." },
   { number: "02", title: "Look for patterns", text: "Reports are reviewed and grouped by concern, service, and broad area." },
   { number: "03", title: "Help riders see more", text: "The dashboard shows grouped trends, never individual accusations." },
 ];
