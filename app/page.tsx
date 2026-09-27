@@ -7,8 +7,8 @@ import Link from "next/link";
 
 const steps = [
   { number: "01", title: "Share privately", text: "Choose a service and add at least one proof file. A driver's number is helpful if you have it. No account is needed." },
-  { number: "02", title: "Look for patterns", text: "Reports are reviewed and grouped by concern, service, and broad area." },
-  { number: "03", title: "Help riders see more", text: "The dashboard shows grouped trends, never individual accusations." },
+  { number: "02", title: "Check a driver", text: "Logged-in riders can check a phone number, full name, or exact photo file against reviewed reports." },
+  { number: "03", title: "Look for patterns", text: "The public dashboard shows grouped trends, never individual accusations." },
 ];
 
 export default function LandingPage() {
@@ -22,6 +22,7 @@ export default function LandingPage() {
       </Link>
       <nav className="landing-nav" aria-label="Main navigation">
         <a href="#how-it-works">How it works</a>
+        <Link href="/dashboard?view=search">Check a driver</Link>
         <Link href="/dashboard">Dashboard</Link>
       </nav>
       <div className="landing-account">
@@ -36,12 +37,12 @@ export default function LandingPage() {
       <section className="landing-hero" aria-labelledby="landing-title">
         <div className="landing-hero-copy">
           <h1 id="landing-title">Every ride has a story.<br /><em>Every story deserves care.</em></h1>
-          <p>Hifazati is a private place to share a concerning ride experience, with supporting proof, and see the bigger picture through reviewed, grouped reports.</p>
+          <p>Share a concerning ride with proof, or log in to check whether a driver identifier appears in reviewed reports. Individual stories stay private.</p>
           <div className="landing-hero-actions">
-            <Link href="/dashboard?view=report" className="landing-primary">Share an experience <span aria-hidden="true">↗</span></Link>
-            <Link href="/dashboard" className="landing-secondary">Explore the dashboard <span aria-hidden="true">→</span></Link>
+            <Link href="/dashboard?view=search" className="landing-primary">Check a driver <span aria-hidden="true">↗</span></Link>
+            <Link href="/dashboard?view=report" className="landing-secondary">Share an experience <span aria-hidden="true">→</span></Link>
           </div>
-          <div className="landing-privacy-note"><span className="landing-lock" aria-hidden="true">✦</span> Your story stays private. Only grouped patterns appear publicly.</div>
+          <div className="landing-privacy-note"><span className="landing-lock" aria-hidden="true">✦</span> Your story and proof stay private. Reviewed match counts require an account.</div>
         </div>
 
         <div className="landing-hero-visual">

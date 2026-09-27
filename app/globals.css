@@ -128,7 +128,7 @@ button:focus-visible, select:focus-visible, input:focus-visible, textarea:focus-
 .form-card fieldset:disabled { opacity: .56; }
 .field-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 20px 16px; }
 .form-card label { font-size: 11px; color: #686d78; font-weight: 700; display: flex; flex-direction: column; gap: 9px; }
-.form-card select, .form-card input[type=month], .form-card input[type=tel], .form-card input[name=area], .form-card input[name=providerOther], .form-card textarea { width: 100%; background: #fff; border: 1px solid #e7e8eb; border-radius: 7px; color: #525762; padding: 11px 12px; min-height: 42px; font-size: 11px; font-weight: 400; }
+.form-card select, .form-card input[type=month], .form-card input[type=tel], .form-card input[name=area], .form-card input[name=driverName], .form-card input[name=providerOther], .form-card textarea { width: 100%; background: #fff; border: 1px solid #e7e8eb; border-radius: 7px; color: #525762; padding: 11px 12px; min-height: 42px; font-size: 11px; font-weight: 400; }
 .form-card textarea { resize: vertical; line-height: 1.6; }
 .details-field { margin-top: 21px; }
 .form-card .field-label { display: inline; color: #686d78; font-size: 11px; font-weight: 700; }
@@ -145,6 +145,25 @@ button:focus-visible, select:focus-visible, input:focus-visible, textarea:focus-
 .report-side { display: flex; flex-direction: column; gap: 15px; }
 .trust-card { padding: 24px; }.trust-symbol { width: 42px; height: 42px; display: grid; place-items: center; border-radius: 11px; color: var(--accent); background: #fbeded; }.trust-card h3 { font-size: 17px; margin: 22px 0 9px; }.trust-card p { color: #969ba5; font-size: 11px; line-height: 1.7; margin: 0 0 20px; }.trust-row { display: flex; align-items: center; gap: 9px; font-size: 11px; color: #666c77; padding: 10px 0; border-top: 1px solid #f1f1f2; }.trust-row svg { color: var(--accent); }
 .emergency-note { font-size: 10px; line-height: 1.65; color: #9a9faa; margin: 0 3px; }
+.lookup-card { max-width: 760px; padding: 28px; }
+.lookup-card .card-heading { margin-bottom: 23px; }
+.lookup-muted, .lookup-gate p, .lookup-hint, .lookup-disclaimer { color: #858a96; font-size: 12px; line-height: 1.7; }
+.lookup-gate h2 { margin: 0 0 7px; font-size: 19px; }
+.lookup-gate p { margin: 0 0 20px; }
+.lookup-actions { display: flex; align-items: center; gap: 10px; }
+.lookup-actions .account-button { min-height: 43px; padding: 0 17px; font-size: 12px; }
+.lookup-tabs { display: flex; flex-wrap: wrap; gap: 8px; }
+.lookup-tab { border: 1px solid #e6e7eb; background: #fff; color: #6e7480; border-radius: 8px; padding: 10px 14px; font-size: 11px; font-weight: 700; }
+.lookup-tab.active { border-color: #d7959a; background: var(--accent-soft); color: var(--accent); }
+.lookup-hint { margin: 14px 0 22px; }
+.lookup-form { display: flex; align-items: flex-end; gap: 12px; flex-wrap: wrap; }
+.lookup-form label { display: flex; flex: 1 1 280px; flex-direction: column; gap: 9px; font-size: 11px; color: #686d78; font-weight: 700; }
+.lookup-form input { min-height: 43px; width: 100%; border: 1px solid #e7e8eb; border-radius: 7px; background: #fff; color: #525762; padding: 10px 12px; font-size: 12px; font-weight: 400; }
+.lookup-form input[type=file] { padding: 8px; font-size: 11px; }
+.lookup-result { margin-top: 22px; border: 1px solid #e8dfe0; border-radius: 9px; background: #fbf7f7; padding: 18px 19px; }
+.lookup-result strong { font-size: 16px; color: #3b3e49; }
+.lookup-result p { margin: 8px 0 0; color: #787e89; font-size: 11px; line-height: 1.6; }
+.lookup-disclaimer { max-width: 760px; margin: 18px 2px; }
 .about-grid { display: grid; grid-template-columns: repeat(3, minmax(0,1fr)); gap: 17px; margin-top: 34px; }.about-card { min-height: 250px; padding: 25px; display: flex; flex-direction: column; }.about-card > span { color: var(--accent); font-size: 10px; letter-spacing: 1px; font-weight: 800; margin-bottom: 35px; }.about-card svg { color: #c26469; }.about-card h3 { font-size: 16px; margin: 18px 0 7px; }.about-card p { margin: 0; color: #989ca6; font-size: 11px; line-height: 1.7; }
 
 

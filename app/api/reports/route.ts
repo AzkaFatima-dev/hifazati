@@ -1,9 +1,11 @@
 import { NextResponse } from "next/server";
+import { createHash } from "node:crypto";
 import {
   driverPhotoTypes, evidenceBucket, evidenceTypes, issues,
   maxDriverPhotoBytes, maxEvidenceBytes, maxEvidenceFiles, providers,
 } from "../../lib/report-options";
 import { getSupabaseAdmin } from "../../lib/supabase-admin";
+import { normalizeDriverName, normalizeDriverPhone } from "../../lib/driver-lookup";
 
 export const runtime = "nodejs";
 
@@ -25,6 +27,7 @@ export async function POST(request: Request) {
   const reportId = data.reportId;
   const providerOther = typeof data.providerOther === "string" ? data.providerOther.trim() : "";
   const driverContact = typeof data.driverContact === "string" ? data.driverContact.trim() : "";
+  const driverName = typeof data.driverName === "string" ? data.driverName.trim().replace(/\s+/gu, " ") : "";
   const details = typeof data.details === "string" ? data.details.trim() : "";
   const area = typeof data.area === "string" ? data.area.trim().replace(/\s+/g, " ") : "";
   const evidencePaths = data.evidencePaths;
@@ -37,6 +40,7 @@ export async function POST(request: Request) {
       (data.provider === "Other" && (providerOther.length < 3 || providerOther.length > 160)) ||
       (driverContact !== "" && (!/^[+0-9() -]{9,24}$/.test(driverContact) ||
         !/^\d{9,15}$/.test(driverContact.replace(/\D/g, "")))) ||
+      (driverName !== "" && (driverName.length < 2 || driverName.length > 100 || /[\u0000-\u001f\u007f]/u.test(driverName))) ||
       details.length < 1 || details.length > 2000 ||
       (month !== "" && (!/^\d{4}-(0[1-9]|1[0-2])$/.test(month) ||
         `${month}-01` > new Date().toISOString().slice(0, 10))) ||
@@ -62,6 +66,13 @@ export async function POST(request: Request) {
     }
   }
 
+  let driverPhotoSha256: string | null = null;
+  if (driverPhotoPath) {
+    const { data: photo, error: photoError } = await admin.storage.from(evidenceBucket).download(driverPhotoPath);
+    if (photoError || !photo) return NextResponse.json({ error: "The driver photo could not be checked. Please upload it again." }, { status: 400 });
+    driverPhotoSha256 = createHash("sha256").update(Buffer.from(await photo.arrayBuffer())).digest("hex");
+  }
+
   const { error } = await admin.from("ride_reports").insert({
     id: reportId,
     provider: data.provider,
@@ -70,9 +81,13 @@ export async function POST(request: Request) {
     area,
     trip_month: month ? `${month}-01` : null,
     details,
+    driver_name: driverName || null,
+    driver_name_key: driverName ? normalizeDriverName(driverName) : null,
     driver_contact: driverContact || null,
+    driver_phone_key: driverContact ? normalizeDriverPhone(driverContact) : null,
     evidence_paths: evidencePaths,
     driver_photo_path: driverPhotoPath || null,
+    driver_photo_sha256: driverPhotoSha256,
   });
   if (error) return NextResponse.json({ error: error.code === "23505" ? "This report was already submitted." : "Could not save the report. Please try again." }, { status: error.code === "23505" ? 409 : 503 });
   return NextResponse.json({ reportId }, { status: 201 });

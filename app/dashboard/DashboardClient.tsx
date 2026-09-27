@@ -5,11 +5,12 @@ import Link from "next/link";
 import { SignInButton, SignUpButton, UserButton, useUser } from "@clerk/nextjs";
 import { areas, driverPhotoTypes, evidenceBucket, evidenceTypes, issues, maxDriverPhotoBytes, maxEvidenceBytes, maxEvidenceFiles, providers, type Provider } from "../lib/report-options";
 import { supabase } from "../lib/supabase";
+import DriverSearch from "./DriverSearch";
 
-type View = "dashboard" | "report" | "about";
+type View = "dashboard" | "report" | "search" | "about";
 type Trend = { provider: Provider; issue_type: string; area: string; report_count: number };
 type LoadState = "not-connected" | "loading" | "ready" | "error";
-type IconName = "grid" | "note" | "info" | "arrow" | "shield" | "lock" | "pin" | "check";
+type IconName = "grid" | "note" | "search" | "info" | "arrow" | "shield" | "lock" | "pin" | "check";
 
 const palette = ["#bb484d", "#d36b70", "#e39b9f", "#edbfc2", "#e8d7d8", "#aeb4bd"];
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
@@ -21,6 +22,7 @@ function Icon({ name, size = 19 }: { name: IconName; size?: number }) {
   switch (name) {
     case "grid": return <svg {...common}><rect x="3" y="3" width="7" height="7" rx="1.5" /><rect x="14" y="3" width="7" height="7" rx="1.5" /><rect x="3" y="14" width="7" height="7" rx="1.5" /><rect x="14" y="14" width="7" height="7" rx="1.5" /></svg>;
     case "note": return <svg {...common}><path d="M7 3h8l4 4v14H7a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2Z" /><path d="M14 3v5h5M9 13h6M9 17h6" /></svg>;
+    case "search": return <svg {...common}><circle cx="10.5" cy="10.5" r="6.5" /><path d="m16 16 5 5" /></svg>;
     case "info": return <svg {...common}><circle cx="12" cy="12" r="9" /><path d="M12 11v5M12 8h.01" /></svg>;
     case "arrow": return <svg {...common}><path d="M5 12h14m-6-6 6 6-6 6" /></svg>;
     case "shield": return <svg {...common}><path d="M12 2 20 5v6c0 5-3.3 8.3-8 11-4.7-2.7-8-6-8-11V5l8-3Z" /><path d="m9 12 2 2 4-4" /></svg>;
@@ -118,6 +120,7 @@ export default function DashboardClient({ initialView }: { initialView: View }) 
           tripMonth: String(form.get("month")),
           details: String(form.get("details") || ""),
           driverContact: String(form.get("driverContact") || ""),
+          driverName: String(form.get("driverName") || ""),
           evidencePaths, driverPhotoPath,
         }),
       });
@@ -141,6 +144,7 @@ export default function DashboardClient({ initialView }: { initialView: View }) 
         <nav className="side-nav" aria-label="Main navigation">
           <button className={view === "dashboard" ? "side-link active" : "side-link"} onClick={() => openView("dashboard")}><Icon name="grid" /> Dashboard</button>
           <button className={view === "report" ? "side-link active" : "side-link"} onClick={() => openView("report")}><Icon name="note" /> Share a report</button>
+          <button className={view === "search" ? "side-link active" : "side-link"} onClick={() => openView("search")}><Icon name="search" /> Check a driver</button>
           <button className={view === "about" ? "side-link active" : "side-link"} onClick={() => openView("about")}><Icon name="info" /> How it works</button>
         </nav>
       </div>
@@ -148,7 +152,7 @@ export default function DashboardClient({ initialView }: { initialView: View }) 
     </aside>
 
     <div className="main-area">
-      <header className="topbar"><div className="crumb"><span>Hifazati</span><span className="crumb-divider">/</span><b>{view === "dashboard" ? "Dashboard" : view === "report" ? "Share a report" : "How it works"}</b></div><div className="topbar-right"><span className="location-pill"><Icon name="pin" size={15} /> Lahore, Pakistan</span>{isLoaded && (user ? <><span className="account-email" title={user.primaryEmailAddress?.emailAddress}>{user.primaryEmailAddress?.emailAddress}</span><UserButton /></> : <><SignInButton mode="modal"><button type="button" className="account-button">Log in</button></SignInButton><SignUpButton mode="modal"><button type="button" className="account-button register-button">Register</button></SignUpButton></>)}</div></header>
+      <header className="topbar"><div className="crumb"><span>Hifazati</span><span className="crumb-divider">/</span><b>{view === "dashboard" ? "Dashboard" : view === "report" ? "Share a report" : view === "search" ? "Check a driver" : "How it works"}</b></div><div className="topbar-right"><span className="location-pill"><Icon name="pin" size={15} /> Lahore, Pakistan</span>{isLoaded && (user ? <><span className="account-email" title={user.primaryEmailAddress?.emailAddress}>{user.primaryEmailAddress?.emailAddress}</span><UserButton /></> : <><SignInButton mode="modal"><button type="button" className="account-button">Log in</button></SignInButton><SignUpButton mode="modal"><button type="button" className="account-button register-button">Register</button></SignUpButton></>)}</div></header>
       <main className="content">
         {view === "dashboard" && <>
           <div className="page-heading"><div><span className="overline">COMMUNITY SAFETY DASHBOARD</span><h1>Ride experiences, <em>made visible.</em></h1><p>Reviewed patterns from riders in Lahore. Individual reports stay private.</p></div><button className="primary-button" onClick={() => openView("report")}>Share an experience <Icon name="arrow" size={17} /></button></div>
@@ -173,11 +177,13 @@ export default function DashboardClient({ initialView }: { initialView: View }) 
         </>}
 
 
+        {view === "search" && <DriverSearch />}
+
         {view === "report" && <>
           <div className="page-heading"><div><span className="overline">PRIVATE INCIDENT REPORT</span><h1>Your experience <em>matters.</em></h1><p>No account is needed. Your report, driver details, and proof files stay private while they are reviewed.</p></div></div>
           <div className="report-layout">
             <section className="card form-card">
-              <div className="card-heading"><div><h3>About the ride</h3><p>Share only what is needed to understand the incident. Do not include your own contact details or exact addresses.</p></div><span className="card-tag">PRIVATE SUBMISSION</span></div>
+              <div className="card-heading"><div><h3>About the ride</h3><p>Share only what is needed to understand the incident. Do not include your own contact details or exact addresses. After review, driver identifiers can support a private match count for signed-in riders.</p></div><span className="card-tag">PRIVATE SUBMISSION</span></div>
               {!connected && <div className="form-offline"><Icon name="info" size={19} /><span>Reporting is temporarily unavailable.</span></div>}
               <form onSubmit={submitReport}>
                 <fieldset disabled={!connected || submitting}>
@@ -186,14 +192,15 @@ export default function DashboardClient({ initialView }: { initialView: View }) 
                     <label><span className="field-label">Type of concern <b className="required-mark" aria-hidden="true">*</b></span><select name="issue" required defaultValue=""><option value="" disabled>Choose a topic</option>{issues.map((issue) => <option key={issue}>{issue}</option>)}</select></label>
                     <label><span className="field-label">Lahore area <b className="required-mark" aria-hidden="true">*</b></span><input name="area" list="lahore-areas" type="text" required minLength={2} maxLength={80} autoComplete="off" placeholder="Search or type your area" /><small>Use the neighborhood, not an exact address.</small></label>
                     <label><span className="field-label">Month of ride</span><input name="month" type="month" max={new Date().toISOString().slice(0, 7)} /></label>
-                    <label><span className="field-label">Driver contact number</span><input name="driverContact" type="tel" inputMode="tel" minLength={9} maxLength={24} placeholder="03XX XXXXXXX or +92…" /><small>Optional · private to reviewers</small></label>
+                    <label><span className="field-label">Driver contact number</span><input name="driverContact" type="tel" inputMode="tel" minLength={9} maxLength={24} placeholder="03XX XXXXXXX or +92…" /><small>Optional · the number itself is never shown in search results</small></label>
+                    <label><span className="field-label">Driver name</span><input name="driverName" type="text" minLength={2} maxLength={100} placeholder="Name shown in the ride app, if known" /><small>Optional · helps with exact-name lookup after review</small></label>
                     {selectedProvider === "Other" && <label><span className="field-label">Describe the service or local ride <b className="required-mark" aria-hidden="true">*</b></span><input name="providerOther" required minLength={3} maxLength={160} placeholder="E.g. local rickshaw from a nearby stand" /></label>}
                   </div>
                   <datalist id="lahore-areas">{areas.map((area) => <option key={area} value={area} />)}</datalist>
                   <label className="details-field"><span className="field-label">What happened? <b className="required-mark" aria-hidden="true">*</b></span><textarea name="details" required maxLength={2000} rows={5} placeholder="Describe the incident without sharing your own identifying details." /></label>
                   <label className="file-field"><span className="field-label">Proof of the incident <b className="required-mark" aria-hidden="true">*</b></span><span>1–3 FILES · UP TO 20 MB EACH</span><input name="evidence" type="file" multiple required accept=".jpg,.jpeg,.png,.webp,.heic,.heif,.mp3,.m4a,.wav,.ogg,.webm,.mp4,.mov,.pdf" /><small>Images, audio messages, short videos, or PDF documents. Files are never shown publicly.</small></label>
                   <label className="file-field">Driver photo <span>UP TO 8 MB</span><input name="driverPhoto" type="file" accept="image/jpeg,image/png,image/webp,image/heic,image/heif" /><small>Only add a photo if you have one. It stays private with the report.</small></label>
-                  <label className="consent"><input type="checkbox" required /><span>I understand this is a private, user-submitted claim. Only reviewed group counts may appear publicly.</span></label>
+                  <label className="consent"><input type="checkbox" required /><span>I understand this is a user-submitted claim. After review, signed-in riders may see a match count for a driver identifier; my story and proof stay private. Only grouped counts appear on the public dashboard.</span></label>
                   {formMessage && <div className="form-feedback success" role="status">{formMessage}</div>}
                   {formError && <div className="form-feedback error" role="alert">{formError}</div>}
                   <button className="primary-button submit-button" type="submit">{submitting ? "Uploading proof…" : "Send report privately"}<Icon name="arrow" size={17} /></button>
