@@ -2,6 +2,7 @@
 
 import { FormEvent, useEffect, useMemo, useState } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { SignInButton, SignUpButton, UserButton, useUser } from "@clerk/nextjs";
 import { areas, driverPhotoTypes, evidenceBucket, evidenceTypes, issues, maxDriverPhotoBytes, maxEvidenceBytes, maxEvidenceFiles, providers, type Provider } from "../lib/report-options";
 import { supabase } from "../lib/supabase";
@@ -40,7 +41,8 @@ function EmptyState({ title, description }: { title: string; description: string
 }
 
 export default function DashboardClient({ initialView }: { initialView: View }) {
-  const [view, setView] = useState<View>(initialView);
+  const view = initialView;
+  const router = useRouter();
   const [filter, setFilter] = useState("All services");
   const [trends, setTrends] = useState<Trend[]>([]);
   const [loadState, setLoadState] = useState<LoadState>(connected ? "loading" : "not-connected");
@@ -48,6 +50,7 @@ export default function DashboardClient({ initialView }: { initialView: View }) 
   const [formMessage, setFormMessage] = useState("");
   const [formError, setFormError] = useState("");
   const [guestReceipt, setGuestReceipt] = useState("");
+  const [guestReceiptSaved, setGuestReceiptSaved] = useState(false);
   const { user, isLoaded } = useUser();
   const [selectedProvider, setSelectedProvider] = useState("");
 
@@ -77,8 +80,8 @@ export default function DashboardClient({ initialView }: { initialView: View }) 
   }).join(", ");
 
   function openView(next: View) {
-    setView(next);
-    window.scrollTo({ top: 0, behavior: "smooth" });
+    router.push(next === "dashboard" ? "/dashboard" : `/dashboard?view=${next}`, { scroll: false });
+    window.scrollTo({ top: 0, behavior: window.matchMedia("(prefers-reduced-motion: reduce)").matches ? "instant" : "smooth" });
   }
 
   async function submitReport(event: FormEvent<HTMLFormElement>) {
@@ -132,7 +135,7 @@ export default function DashboardClient({ initialView }: { initialView: View }) 
       const result = await response.json() as { error?: string; receipt?: string | null };
       if (!response.ok) throw new Error(result.error || "Could not save the report.");
       if (result.receipt) {
-        saveGuestReceipt(result.receipt);
+        setGuestReceiptSaved(saveGuestReceipt(result.receipt));
         setGuestReceipt(result.receipt);
       }
       formElement.reset();
@@ -187,9 +190,9 @@ export default function DashboardClient({ initialView }: { initialView: View }) 
         </>}
 
 
-        {view === "search" && <DriverSearch />}
+        {view === "search" && <DriverSearch key={user?.id || "guest"} />}
 
-        {view === "profile" && <MyReports onShare={() => openView("report")} />}
+        {view === "profile" && <MyReports key={user?.id || "guest"} onShare={() => openView("report")} />}
 
         {view === "report" && <>
           <div className="page-heading"><div><span className="overline">PRIVATE INCIDENT REPORT</span><h1>Your experience <em>matters.</em></h1><p>No account is needed. Your report, driver details, and proof files stay private while they are reviewed.</p></div></div>
@@ -214,7 +217,7 @@ export default function DashboardClient({ initialView }: { initialView: View }) 
                   <label className="file-field">Driver photo <span>UP TO 8 MB</span><input name="driverPhoto" type="file" accept="image/jpeg,image/png,image/webp,image/heic,image/heif" /><small>Only add a photo if you have one. It stays private with the report.</small></label>
                   <label className="consent"><input type="checkbox" required /><span>I understand this is a user-submitted claim. After review, signed-in riders may see a match count for a driver identifier; my story and proof stay private. Only grouped counts appear on the public dashboard.</span></label>
                   {formMessage && <div className="form-feedback success" role="status">{formMessage}</div>}
-                  {guestReceipt && <div className="guest-receipt" role="status"><strong>Save your private receipt</strong><p>You can delete this anonymous report from “My reports” later. This browser also remembers the receipt.</p><code>{guestReceipt}</code><button type="button" className="account-button" onClick={() => openView("profile")}>Go to My reports</button></div>}
+                  {guestReceipt && <div className="guest-receipt" role="status"><strong>Save your private receipt</strong><p>You can delete this anonymous report from “My reports” later. {guestReceiptSaved ? "This browser also remembers the receipt." : "Browser storage is unavailable. Copy this receipt somewhere private before leaving."}</p><code>{guestReceipt}</code><button type="button" className="account-button" onClick={() => openView("profile")}>Go to My reports</button></div>}
                   {formError && <div className="form-feedback error" role="alert">{formError}</div>}
                   <button className="primary-button submit-button" type="submit">{submitting ? "Uploading proof…" : "Send report privately"}<Icon name="arrow" size={17} /></button>
                 </fieldset>

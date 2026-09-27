@@ -3,6 +3,7 @@ import { auth } from "@clerk/nextjs/server";
 import { NextResponse } from "next/server";
 import { evidenceBucket } from "../../../lib/report-options";
 import { getSupabaseAdmin } from "../../../lib/supabase-admin";
+import { readJsonObject } from "../../../lib/api-request";
 
 export const runtime = "nodejs";
 
@@ -18,13 +19,9 @@ export async function DELETE(request: Request, { params }: { params: Promise<{ i
   if (!uuidPattern.test(id)) return reply({ error: "Invalid report ID." }, 400);
   const { isAuthenticated, userId } = await auth();
 
-  const raw = await request.text();
-  if (raw.length > 256) return reply({ error: "Invalid private receipt." }, 400);
-  let receipt: unknown = null;
-  if (raw) {
-    try { receipt = (JSON.parse(raw) as Record<string, unknown>).receipt; }
-    catch { return reply({ error: "Invalid private receipt." }, 400); }
-  }
+  const parsed = await readJsonObject(request, 256);
+  if (parsed.response) return parsed.response;
+  const receipt = parsed.data.receipt;
   const match = typeof receipt === "string" ? receiptPattern.exec(receipt) : null;
   const tokenHash = match && match[1].toLowerCase() === id.toLowerCase()
     ? createHash("sha256").update(match[2].toLowerCase()).digest("hex") : null;

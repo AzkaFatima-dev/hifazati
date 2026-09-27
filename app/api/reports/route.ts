@@ -7,6 +7,8 @@ import {
 } from "../../lib/report-options";
 import { getSupabaseAdmin } from "../../lib/supabase-admin";
 import { normalizeDriverName, normalizeDriverPhone } from "../../lib/driver-lookup";
+import { readJsonObject } from "../../lib/api-request";
+import { checkIntakeLimit } from "../../lib/intake-limit";
 
 export const runtime = "nodejs";
 
@@ -21,10 +23,9 @@ export async function POST(request: Request) {
   const admin = getSupabaseAdmin();
   if (!admin) return NextResponse.json({ error: "Reporting is temporarily unavailable." }, { status: 503 });
 
-  let input: unknown;
-  try { input = await request.json(); } catch { return NextResponse.json({ error: "Invalid request." }, { status: 400 }); }
-  if (!input || typeof input !== "object") return NextResponse.json({ error: "Invalid request." }, { status: 400 });
-  const data = input as Record<string, unknown>;
+  const parsed = await readJsonObject(request);
+  if (parsed.response) return parsed.response;
+  const data = parsed.data;
   const reportId = data.reportId;
   const providerOther = typeof data.providerOther === "string" ? data.providerOther.trim() : "";
   const driverContact = typeof data.driverContact === "string" ? data.driverContact.trim() : "";
@@ -58,6 +59,8 @@ export async function POST(request: Request) {
       match[2] !== (index < evidencePaths.length ? "evidence" : "driver-photo");
   })) return NextResponse.json({ error: "Invalid proof file reference." }, { status: 400 });
 
+  const limited = await checkIntakeLimit(request, "report");
+  if (limited) return limited;
   for (const [index, path] of paths.entries()) {
     const { data: file, error } = await admin.storage.from(evidenceBucket).info(path);
     const allowed = index < evidencePaths.length ? evidenceTypes : driverPhotoTypes;

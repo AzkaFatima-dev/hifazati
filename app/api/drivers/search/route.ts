@@ -2,6 +2,7 @@ import { auth } from "@clerk/nextjs/server";
 import { NextResponse } from "next/server";
 import { normalizeDriverName, normalizeDriverPhone } from "../../../lib/driver-lookup";
 import { getSupabaseAdmin } from "../../../lib/supabase-admin";
+import { readJsonObject } from "../../../lib/api-request";
 
 export const runtime = "nodejs";
 
@@ -13,12 +14,9 @@ export async function POST(request: Request) {
   const { isAuthenticated, userId } = await auth();
   if (!isAuthenticated || !userId) return reply({ error: "Log in to search reviewed reports." }, 401);
 
-  const raw = await request.text();
-  if (raw.length > 1024) return reply({ error: "Search input is too long." }, 400);
-  let input: unknown;
-  try { input = JSON.parse(raw); } catch { return reply({ error: "Invalid search request." }, 400); }
-  if (!input || typeof input !== "object") return reply({ error: "Invalid search request." }, 400);
-  const { method, value } = input as Record<string, unknown>;
+  const parsed = await readJsonObject(request, 1024);
+  if (parsed.response) return parsed.response;
+  const { method, value } = parsed.data;
   if (typeof value !== "string") return reply({ error: "Enter a search value." }, 400);
 
   let column: "driver_phone_key" | "driver_name_key" | "driver_photo_sha256";

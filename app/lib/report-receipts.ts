@@ -9,11 +9,12 @@ export function getGuestReceipts(): string[] {
 }
 
 export function saveGuestReceipt(receipt: string) {
-  if (!receiptPattern.test(receipt)) return;
+  if (!receiptPattern.test(receipt)) return false;
   try {
     const saved = [receipt, ...getGuestReceipts().filter((value) => value !== receipt)].slice(0, 20);
     localStorage.setItem(storageKey, JSON.stringify(saved));
-  } catch { /* The receipt is still shown to the rider for manual saving. */ }
+    return true;
+  } catch { return false; }
 }
 
 export function forgetGuestReceipt(receipt: string) {

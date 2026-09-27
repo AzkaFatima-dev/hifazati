@@ -13,6 +13,8 @@ vercel.cmd env run -e development -- npm.cmd run dev
 
 The app uses a Supabase database provisioned through Vercel. It does not store reports in browser local storage. The browser needs `NEXT_PUBLIC_SUPABASE_URL` and `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY`; report routes need `SUPABASE_URL` and `SUPABASE_SERVICE_ROLE_KEY`. Clerk uses `NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY` in the browser and `CLERK_SECRET_KEY` on the server. Never put either secret key in a `NEXT_PUBLIC_` variable.
 
+For the latest permission, API, and browser checks, see [QA_REPORT.md](QA_REPORT.md). The `scripts/qa-*` checks require an administrator test environment; the API check creates and then deletes temporary test records and Clerk users.
+
 ## Database and auth
 
 For a new Supabase project, apply [`supabase/schema.sql`](supabase/schema.sql), then the migrations in [`supabase/migrations`](supabase/migrations) in filename order. All migrations are applied to production. They create a private `report-evidence` bucket and change raw report writes to server-only. Report records require a written account, Lahore area, driver contact number, driver name, and 1–3 proof paths. The ride month and driver photo are optional; a service description is required when the rider chooses Other. Each proof file may be up to 20 MB; the driver photo may be up to 8 MB.
@@ -26,6 +28,8 @@ Riders register, log in, and manage accounts with Clerk. Anonymous reports remai
 Signed-in users can search reviewed reports by an exact driver number, reported name, or SHA-256 hash of the exact photo file. Photo lookup is not face recognition; different pictures of the same person do not match. A name may belong to more than one person. Search returns only a count, never raw reports, identifiers, or evidence. Each account is limited to 20 searches per rolling 24 hours, and the API checks Clerk authentication server-side. Reports without a corresponding identifier and pending or rejected reports are not searchable. The previous Supabase Auth user cannot use that password with Clerk and needs to register in Clerk. Reports were never linked to Supabase user IDs. Clerk sign-up and email verification behavior follows the configured Clerk instance settings. The current public demo uses Clerk development keys on a `vercel.app` domain; before a production launch, use an owned domain and Clerk production keys.
 
 Review reports in the Supabase dashboard, update accepted reports' `review_status` to `reviewed`, then add only genuinely reviewed groups of at least three to `public_ride_trends`. The dashboard reads from that separate aggregate table. It never displays descriptions, driver phone numbers, or uploaded files. User-submitted proof is supporting material, not independent verification of a claim.
+
+`reviewed` means the submission was checked and is eligible for private driver-match counts. It does **not** confirm the alleged incident. The database currently supports `pending`, `reviewed`, and `rejected`; there is no `confirmed` status or independent verification workflow. A single reviewed report may appear in a signed-in rider's private exact-match search, but public aggregate trends require three matching reviewed reports. Database triggers block an unsupported aggregate and remove one if a reviewed report is later rejected or deleted.
 
 ## Landing photos
 

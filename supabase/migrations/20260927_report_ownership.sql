@@ -40,11 +40,11 @@ begin
   select * into report_row from public.ride_reports
     where id = p_report_id for update;
   if not found then return null; end if;
-  if not (
+  if (
     (report_row.owner_user_id is not null and report_row.owner_user_id = p_owner_user_id)
     or (report_row.owner_user_id is null and report_row.manage_token_hash is not null
         and report_row.manage_token_hash = p_manage_token_hash)
-  ) then return null; end if;
+  ) is not true then return null; end if;
 
   file_paths := coalesce(report_row.evidence_paths, array[]::text[])
     || case when report_row.driver_photo_path is null then array[]::text[]

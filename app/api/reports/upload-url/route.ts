@@ -5,6 +5,8 @@ import {
   maxDriverPhotoBytes, maxEvidenceBytes,
 } from "../../../lib/report-options";
 import { getSupabaseAdmin } from "../../../lib/supabase-admin";
+import { readJsonObject, privateJson } from "../../../lib/api-request";
+import { checkIntakeLimit } from "../../../lib/intake-limit";
 
 export const runtime = "nodejs";
 
@@ -14,10 +16,9 @@ export async function POST(request: Request) {
   const admin = getSupabaseAdmin();
   if (!admin) return NextResponse.json({ error: "Reporting is temporarily unavailable." }, { status: 503 });
 
-  let input: unknown;
-  try { input = await request.json(); } catch { return NextResponse.json({ error: "Invalid request." }, { status: 400 }); }
-  if (!input || typeof input !== "object") return NextResponse.json({ error: "Invalid request." }, { status: 400 });
-  const { reportId, kind, contentType, size } = input as Record<string, unknown>;
+  const parsed = await readJsonObject(request, 1024);
+  if (parsed.response) return parsed.response;
+  const { reportId, kind, contentType, size } = parsed.data;
   const isEvidence = kind === "evidence";
   const isDriverPhoto = kind === "driver-photo";
   if (typeof reportId !== "string" || !uuidPattern.test(reportId) || (!isEvidence && !isDriverPhoto) ||
@@ -27,8 +28,10 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "Choose a supported file within the size limit." }, { status: 400 });
   }
 
+  const limited = await checkIntakeLimit(request, "upload");
+  if (limited) return limited;
   const path = `${reportId}/${kind}-${randomUUID()}.${extensionByType[contentType]}`;
   const { data, error } = await admin.storage.from(evidenceBucket).createSignedUploadUrl(path);
   if (error || !data) return NextResponse.json({ error: "Could not prepare the private upload." }, { status: 503 });
-  return NextResponse.json({ path, token: data.token });
+  return privateJson({ path, token: data.token });
 }

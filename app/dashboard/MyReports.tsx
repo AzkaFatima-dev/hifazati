@@ -12,8 +12,8 @@ type Report = {
   area: string;
   trip_month: string | null;
   details: string | null;
-  driver_name: string;
-  driver_contact: string;
+  driver_name: string | null;
+  driver_contact: string | null;
   review_status: "pending" | "reviewed" | "rejected";
   created_at: string;
 };
@@ -22,12 +22,13 @@ type ManagedReport = Report & { receipt?: string };
 function ReportCard({ report, onDelete, deleting }: { report: ManagedReport; onDelete: (report: ManagedReport) => void; deleting: boolean }) {
   const [confirming, setConfirming] = useState(false);
   const date = new Date(report.created_at).toLocaleDateString("en-PK", { day: "numeric", month: "short", year: "numeric" });
-  const contactHint = `•••• ${report.driver_contact.replace(/\D/g, "").slice(-4)}`;
+  const contactHint = report.driver_contact ? `•••• ${report.driver_contact.replace(/\D/g, "").slice(-4)}` : "number not recorded";
   return <article className="card my-report-card">
     <div className="my-report-top"><div><span className="my-report-date">Submitted {date}</span><h3>{report.provider === "Other" ? report.provider_other || "Local ride" : report.provider} · {report.issue_type}</h3></div><span className={`my-report-status ${report.review_status}`}>{report.review_status}</span></div>
-    <p className="my-report-meta">{report.area}{report.trip_month ? ` · ${new Date(report.trip_month).toLocaleDateString("en-PK", { month: "long", year: "numeric" })}` : ""} · Driver: {report.driver_name} ({contactHint})</p>
+    <p className="my-report-meta">{report.area}{report.trip_month ? ` · ${new Date(report.trip_month).toLocaleDateString("en-PK", { month: "long", year: "numeric", timeZone: "UTC" })}` : ""} · Driver: {report.driver_name || "Name not recorded"} ({contactHint})</p>
     {report.details && <p className="my-report-details">{report.details}</p>}
     <p className="my-report-private">Your proof files remain private and are scheduled for removal when you delete this report.</p>
+    {report.review_status === "reviewed" && <p className="my-report-private">Reviewed means the report can be counted in driver searches. It does not independently confirm the incident.</p>}
     {confirming ? <div className="my-report-confirm"><span>Delete this report and its proof files? This cannot be undone.</span><button type="button" className="my-report-delete" disabled={deleting} onClick={() => onDelete(report)}>{deleting ? "Deleting…" : "Yes, delete"}</button><button type="button" className="account-button" disabled={deleting} onClick={() => setConfirming(false)}>Cancel</button></div> : <button type="button" className="my-report-delete-link" onClick={() => setConfirming(true)}>Delete report</button>}
   </article>;
 }
@@ -39,6 +40,8 @@ export default function MyReports({ onShare }: { onShare: () => void }) {
   const [accountReports, setAccountReports] = useState<Report[]>([]);
   const [guestReports, setGuestReports] = useState<ManagedReport[]>([]);
   const [loadedKey, setLoadedKey] = useState<string | null>(null);
+  const [loadFailed, setLoadFailed] = useState(false);
+  const [reload, setReload] = useState(0);
   const [deletingId, setDeletingId] = useState<string | null>(null);
   const [addingReceipt, setAddingReceipt] = useState(false);
   const [message, setMessage] = useState("");
@@ -62,18 +65,25 @@ export default function MyReports({ onShare }: { onShare: () => void }) {
         if ((accountResponse && !accountResponse.ok) || (guestResponse && !guestResponse.ok)) throw new Error(accountBody.error || guestBody.error || "Could not load your reports.");
         const receiptById = new Map(receipts.map((receipt) => [receipt.split(".")[0].toLowerCase(), receipt]));
         if (active) {
+          setLoadFailed(false);
+          setError("");
           setAccountReports(accountBody.reports ?? []);
           setGuestReports((guestBody.reports ?? []).map((report) => ({ ...report, receipt: receiptById.get(report.id.toLowerCase()) })));
         }
       } catch (caught) {
-        if (active) setError(caught instanceof Error ? caught.message : "Could not load your reports.");
+        if (active) {
+          setAccountReports([]);
+          setGuestReports([]);
+          setLoadFailed(true);
+          setError(caught instanceof Error ? caught.message : "Could not load your reports.");
+        }
       } finally {
         if (active) setLoadedKey(loadKey);
       }
     }
     load();
     return () => { active = false; };
-  }, [isLoaded, userId, receipts, loadKey]);
+  }, [isLoaded, userId, receipts, loadKey, reload]);
 
   async function addReceipt(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -86,10 +96,10 @@ export default function MyReports({ onShare }: { onShare: () => void }) {
       const body = await response.json() as { reports?: Report[]; error?: string };
       if (!response.ok) throw new Error(body.error || "Could not check that receipt.");
       if (!body.reports?.some((report) => report.id.toLowerCase() === receipt.split(".")[0].toLowerCase())) throw new Error("No report matches that private receipt.");
-      saveGuestReceipt(receipt);
-      setReceipts(getGuestReceipts());
+      const saved = saveGuestReceipt(receipt);
+      setReceipts((current) => [receipt, ...current.filter((item) => item !== receipt)].slice(0, 20));
       setReceiptInput("");
-      setMessage("Private receipt saved in this browser.");
+      setMessage(saved ? "Private receipt saved in this browser." : "Receipt added for this visit. Keep a private copy because browser storage is unavailable.");
     } catch (caught) {
       setError(caught instanceof Error ? caught.message : "Could not check that receipt.");
     } finally {
@@ -110,7 +120,7 @@ export default function MyReports({ onShare }: { onShare: () => void }) {
       if ((!response.ok && response.status !== 202) || !body.deleted) throw new Error(body.error || "Could not delete the report.");
       setAccountReports((existing) => existing.filter((item) => item.id !== report.id));
       setGuestReports((existing) => existing.filter((item) => item.id !== report.id));
-      if (report.receipt) { forgetGuestReceipt(report.receipt); setReceipts(getGuestReceipts()); }
+      if (report.receipt) { forgetGuestReceipt(report.receipt); setReceipts((current) => current.filter((receipt) => receipt !== report.receipt)); }
       setMessage(body.filesPending ? "Report deleted. Private file cleanup is pending with the site administrator." : "Report and its private proof files were deleted.");
     } catch (caught) {
       setError(caught instanceof Error ? caught.message : "Could not delete the report.");
@@ -121,7 +131,7 @@ export default function MyReports({ onShare }: { onShare: () => void }) {
 
   return <>
     <div className="page-heading"><div><span className="overline">YOUR PRIVATE SPACE</span><h1>My <em>reports.</em></h1><p>See what you submitted and remove a report when you choose.</p></div><button type="button" onClick={onShare} className="primary-button">Share another report</button></div>
-    {!isLoaded || loading ? <div className="card my-reports-empty">Loading your reports…</div> : <>
+    {!isLoaded || loading ? <div className="card my-reports-empty">Loading your reports…</div> : loadFailed ? <div className="card my-reports-empty"><p>Your reports could not be loaded.</p><button type="button" className="account-button" onClick={() => { setLoadedKey(null); setReload((value) => value + 1); }}>Try again</button></div> : <>
       {!user && <div className="card my-reports-gate"><h2>Log in to see reports from your account</h2><p>Anonymous reports can still be managed below with their private receipts.</p><SignInButton mode="modal"><button type="button" className="primary-button">Log in</button></SignInButton></div>}
       {user && <section className="my-reports-section"><h2>Reports linked to your account</h2>{accountReports.length ? <div className="my-reports-list">{accountReports.map((report) => <ReportCard key={report.id} report={report} onDelete={deleteReport} deleting={deletingId === report.id} />)}</div> : <div className="card my-reports-empty">No reports linked to this account yet. Reports sent while logged out need their private receipt.</div>}</section>}
       <section className="my-reports-section"><h2>Anonymous reports</h2><p className="my-reports-note">Anonymous reports are not linked to an account. This browser remembers their private receipts; paste a receipt here if you saved it elsewhere.</p><form className="my-receipt-form" onSubmit={addReceipt}><label htmlFor="report-receipt">Private receipt</label><div><input id="report-receipt" type="text" autoComplete="off" value={receiptInput} onChange={(event) => setReceiptInput(event.target.value)} placeholder="Paste your private receipt" /><button type="submit" className="account-button" disabled={addingReceipt}>{addingReceipt ? "Checking…" : "Add receipt"}</button></div></form>{guestReports.length ? <div className="my-reports-list">{guestReports.map((report) => <ReportCard key={report.id} report={report} onDelete={deleteReport} deleting={deletingId === report.id} />)}</div> : <div className="card my-reports-empty">No anonymous reports saved in this browser.</div>}</section>

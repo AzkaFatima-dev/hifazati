@@ -2,6 +2,8 @@ import { createHash } from "node:crypto";
 import { auth } from "@clerk/nextjs/server";
 import { NextResponse } from "next/server";
 import { getSupabaseAdmin } from "../../lib/supabase-admin";
+import { readJsonObject } from "../../lib/api-request";
+import { checkIntakeLimit } from "../../lib/intake-limit";
 
 export const runtime = "nodejs";
 
@@ -24,11 +26,9 @@ export async function GET() {
 }
 
 export async function POST(request: Request) {
-  const raw = await request.text();
-  if (raw.length > 4096) return reply({ error: "Too many receipts." }, 400);
-  let input: unknown;
-  try { input = JSON.parse(raw); } catch { return reply({ error: "Invalid receipt request." }, 400); }
-  const receipts = input && typeof input === "object" ? (input as Record<string, unknown>).receipts : null;
+  const parsed = await readJsonObject(request, 4096);
+  if (parsed.response) return parsed.response;
+  const receipts = parsed.data.receipts;
   if (!Array.isArray(receipts) || receipts.length > 20 || !receipts.every((item) => typeof item === "string")) {
     return reply({ error: "Send up to 20 private receipts." }, 400);
   }
@@ -39,6 +39,8 @@ export async function POST(request: Request) {
     hashToId.set(createHash("sha256").update(match[2].toLowerCase()).digest("hex"), match[1].toLowerCase());
   }
   if (hashToId.size === 0) return reply({ reports: [] }, 200);
+  const limited = await checkIntakeLimit(request, "receipt");
+  if (limited) return limited;
   const admin = getSupabaseAdmin();
   if (!admin) return reply({ error: "Reports are temporarily unavailable." }, 503);
   const { data, error } = await admin.from("ride_reports")
