@@ -23,7 +23,7 @@ The live database inventory at the last check contained **0 reports, 0 public tr
 - **API:** 49 checks passed using real Clerk test sessions and private Supabase uploads. This covered required fields, account separation, pending and reviewed search results, private receipts, and proof deletion. QA accounts, reports, files, and lookup attempts were removed.
 - **Browser:** 78 checks passed across 1440px, 390px, and 320px layouts. All five main views loaded without horizontal overflow or JavaScript runtime errors. The final targeted accessibility scan reported zero violations on the two views that still had contrast findings.
 - **Build:** ESLint and production build passed. `npm audit` reported zero vulnerabilities at the time of review.
-- **Deployment:** Production HTTP smoke checks should be run again after the QA changes are deployed.
+- **Deployment:** Commit `cf362a8` deployed successfully to `hifazati.vercel.app`. Production API checks passed through authentication, report creation, ownership separation, private proof storage, and reviewed name/phone/photo lookups. A network connection timeout interrupted the later guest-report portion. The one QA report and two QA accounts left by that interruption were removed; a follow-up inventory found zero QA reports, QA accounts, and proof files. The full 49-check API run passed locally against the same Supabase and Clerk development projects before deployment.
 
 Run the repeatable checks with `npm.cmd run qa:db`, `npm.cmd run qa:api`, and `npm.cmd run qa:browser` after providing `.env.qa.local` and starting the local QA server with `node scripts/qa-server.mjs .env.qa.local`. The API check creates temporary users and reports. Browser screenshots are placed in the ignored `qa-artifacts` directory.
 
@@ -34,3 +34,4 @@ Run the repeatable checks with `npm.cmd run qa:db`, `npm.cmd run qa:api`, and `n
 Proof uploads are private, but MIME and size checks do not establish authenticity or scan for malware. The report-review decision remains manual in Supabase. An upload abandoned before submission can leave a private orphan file; administrators should periodically remove old orphaned files. If proof removal after a report deletion fails, its file paths remain in `report_deletion_jobs` for administrator cleanup.
 
 The public demo currently uses Clerk development keys. An owned domain and Clerk production keys are needed for a normal production launch.
+The browser review confirmed that login and registration controls render, while API tests used valid Clerk sessions; manual email-and-password form entry was not part of this automated run.
