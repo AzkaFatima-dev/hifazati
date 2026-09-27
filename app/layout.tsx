@@ -3,7 +3,7 @@ import { ClerkProvider } from "@clerk/nextjs";
 import "./globals.css";
 
 export const metadata: Metadata = {
-  title: "Hifazati — Lahore ride safety reports",
+  title: "Hifazati",
   description: "Privately report a ride concern and see reviewed community trends in Lahore.",
 };
 
