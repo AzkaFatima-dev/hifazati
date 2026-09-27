@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
-import { createHash } from "node:crypto";
+import { createHash, randomBytes } from "node:crypto";
+import { auth } from "@clerk/nextjs/server";
 import {
   driverPhotoTypes, evidenceBucket, evidenceTypes, issues,
   maxDriverPhotoBytes, maxEvidenceBytes, maxEvidenceFiles, providers,
@@ -73,6 +74,10 @@ export async function POST(request: Request) {
     driverPhotoSha256 = createHash("sha256").update(Buffer.from(await photo.arrayBuffer())).digest("hex");
   }
 
+  const { isAuthenticated, userId } = await auth();
+  const ownerUserId = isAuthenticated ? userId : null;
+  const manageToken = ownerUserId ? null : randomBytes(32).toString("hex");
+
   const { error } = await admin.from("ride_reports").insert({
     id: reportId,
     provider: data.provider,
@@ -88,7 +93,9 @@ export async function POST(request: Request) {
     evidence_paths: evidencePaths,
     driver_photo_path: driverPhotoPath || null,
     driver_photo_sha256: driverPhotoSha256,
+    owner_user_id: ownerUserId,
+    manage_token_hash: manageToken ? createHash("sha256").update(manageToken).digest("hex") : null,
   });
   if (error) return NextResponse.json({ error: error.code === "23505" ? "This report was already submitted." : "Could not save the report. Please try again." }, { status: error.code === "23505" ? 409 : 503 });
-  return NextResponse.json({ reportId }, { status: 201 });
+  return NextResponse.json({ reportId, receipt: manageToken ? `${reportId}.${manageToken}` : null }, { status: 201, headers: { "Cache-Control": "private, no-store" } });
 }

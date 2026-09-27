@@ -5,12 +5,14 @@ import Link from "next/link";
 import { SignInButton, SignUpButton, UserButton, useUser } from "@clerk/nextjs";
 import { areas, driverPhotoTypes, evidenceBucket, evidenceTypes, issues, maxDriverPhotoBytes, maxEvidenceBytes, maxEvidenceFiles, providers, type Provider } from "../lib/report-options";
 import { supabase } from "../lib/supabase";
+import { saveGuestReceipt } from "../lib/report-receipts";
 import DriverSearch from "./DriverSearch";
+import MyReports from "./MyReports";
 
-type View = "dashboard" | "report" | "search" | "about";
+type View = "dashboard" | "report" | "search" | "profile" | "about";
 type Trend = { provider: Provider; issue_type: string; area: string; report_count: number };
 type LoadState = "not-connected" | "loading" | "ready" | "error";
-type IconName = "grid" | "note" | "search" | "info" | "arrow" | "shield" | "lock" | "pin" | "check";
+type IconName = "grid" | "note" | "search" | "user" | "info" | "arrow" | "shield" | "lock" | "pin" | "check";
 
 const palette = ["#bb484d", "#d36b70", "#e39b9f", "#edbfc2", "#e8d7d8", "#aeb4bd"];
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
@@ -23,6 +25,7 @@ function Icon({ name, size = 19 }: { name: IconName; size?: number }) {
     case "grid": return <svg {...common}><rect x="3" y="3" width="7" height="7" rx="1.5" /><rect x="14" y="3" width="7" height="7" rx="1.5" /><rect x="3" y="14" width="7" height="7" rx="1.5" /><rect x="14" y="14" width="7" height="7" rx="1.5" /></svg>;
     case "note": return <svg {...common}><path d="M7 3h8l4 4v14H7a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2Z" /><path d="M14 3v5h5M9 13h6M9 17h6" /></svg>;
     case "search": return <svg {...common}><circle cx="10.5" cy="10.5" r="6.5" /><path d="m16 16 5 5" /></svg>;
+    case "user": return <svg {...common}><circle cx="12" cy="8" r="4" /><path d="M4 21a8 8 0 0 1 16 0" /></svg>;
     case "info": return <svg {...common}><circle cx="12" cy="12" r="9" /><path d="M12 11v5M12 8h.01" /></svg>;
     case "arrow": return <svg {...common}><path d="M5 12h14m-6-6 6 6-6 6" /></svg>;
     case "shield": return <svg {...common}><path d="M12 2 20 5v6c0 5-3.3 8.3-8 11-4.7-2.7-8-6-8-11V5l8-3Z" /><path d="m9 12 2 2 4-4" /></svg>;
@@ -44,11 +47,12 @@ export default function DashboardClient({ initialView }: { initialView: View }) 
   const [submitting, setSubmitting] = useState(false);
   const [formMessage, setFormMessage] = useState("");
   const [formError, setFormError] = useState("");
+  const [guestReceipt, setGuestReceipt] = useState("");
   const { user, isLoaded } = useUser();
   const [selectedProvider, setSelectedProvider] = useState("");
 
   useEffect(() => {
-    if (!connected) return;
+    if (!connected || view !== "dashboard") return;
     fetch(`${supabaseUrl}/rest/v1/public_ride_trends?select=provider,issue_type,area,report_count`, {
       headers: { apikey: supabaseKey! },
     }).then(async (response) => {
@@ -57,7 +61,7 @@ export default function DashboardClient({ initialView }: { initialView: View }) 
       setTrends(rows.filter((row) => row.report_count >= 3));
       setLoadState("ready");
     }).catch(() => setLoadState("error"));
-  }, []);
+  }, [view]);
 
   const visible = useMemo(() => trends.filter((row) => filter === "All services" || row.provider === filter), [trends, filter]);
   const total = visible.reduce((sum, row) => sum + row.report_count, 0);
@@ -94,6 +98,7 @@ export default function DashboardClient({ initialView }: { initialView: View }) 
     setSubmitting(true);
     setFormMessage("");
     setFormError("");
+    setGuestReceipt("");
     try {
       const reportId = crypto.randomUUID();
       async function uploadFile(file: File, kind: "evidence" | "driver-photo") {
@@ -124,8 +129,12 @@ export default function DashboardClient({ initialView }: { initialView: View }) 
           evidencePaths, driverPhotoPath,
         }),
       });
-      const result = await response.json() as { error?: string };
+      const result = await response.json() as { error?: string; receipt?: string | null };
       if (!response.ok) throw new Error(result.error || "Could not save the report.");
+      if (result.receipt) {
+        saveGuestReceipt(result.receipt);
+        setGuestReceipt(result.receipt);
+      }
       formElement.reset();
       setSelectedProvider("");
       setFormMessage("Your report and proof were sent privately for review. Your identity and the driver's details will not appear publicly.");
@@ -145,6 +154,7 @@ export default function DashboardClient({ initialView }: { initialView: View }) 
           <button className={view === "dashboard" ? "side-link active" : "side-link"} onClick={() => openView("dashboard")}><Icon name="grid" /> Dashboard</button>
           <button className={view === "report" ? "side-link active" : "side-link"} onClick={() => openView("report")}><Icon name="note" /> Share a report</button>
           <button className={view === "search" ? "side-link active" : "side-link"} onClick={() => openView("search")}><Icon name="search" /> Check a driver</button>
+          <button className={view === "profile" ? "side-link active" : "side-link"} onClick={() => openView("profile")}><Icon name="user" /> My reports</button>
           <button className={view === "about" ? "side-link active" : "side-link"} onClick={() => openView("about")}><Icon name="info" /> How it works</button>
         </nav>
       </div>
@@ -152,7 +162,7 @@ export default function DashboardClient({ initialView }: { initialView: View }) 
     </aside>
 
     <div className="main-area">
-      <header className="topbar"><div className="crumb"><span>Hifazati</span><span className="crumb-divider">/</span><b>{view === "dashboard" ? "Dashboard" : view === "report" ? "Share a report" : view === "search" ? "Check a driver" : "How it works"}</b></div><div className="topbar-right"><span className="location-pill"><Icon name="pin" size={15} /> Lahore, Pakistan</span>{isLoaded && (user ? <><span className="account-email" title={user.primaryEmailAddress?.emailAddress}>{user.primaryEmailAddress?.emailAddress}</span><UserButton /></> : <><SignInButton mode="modal"><button type="button" className="account-button">Log in</button></SignInButton><SignUpButton mode="modal"><button type="button" className="account-button register-button">Register</button></SignUpButton></>)}</div></header>
+      <header className="topbar"><div className="crumb"><span>Hifazati</span><span className="crumb-divider">/</span><b>{view === "dashboard" ? "Dashboard" : view === "report" ? "Share a report" : view === "search" ? "Check a driver" : view === "profile" ? "My reports" : "How it works"}</b></div><div className="topbar-right"><span className="location-pill"><Icon name="pin" size={15} /> Lahore, Pakistan</span>{isLoaded && (user ? <><button type="button" className="account-email" title="My reports" onClick={() => openView("profile")}>{user.primaryEmailAddress?.emailAddress}</button><UserButton /></> : <><SignInButton mode="modal"><button type="button" className="account-button">Log in</button></SignInButton><SignUpButton mode="modal"><button type="button" className="account-button register-button">Register</button></SignUpButton></>)}</div></header>
       <main className="content">
         {view === "dashboard" && <>
           <div className="page-heading"><div><span className="overline">COMMUNITY SAFETY DASHBOARD</span><h1>Ride experiences, <em>made visible.</em></h1><p>Reviewed patterns from riders in Lahore. Individual reports stay private.</p></div><button className="primary-button" onClick={() => openView("report")}>Share an experience <Icon name="arrow" size={17} /></button></div>
@@ -179,6 +189,8 @@ export default function DashboardClient({ initialView }: { initialView: View }) 
 
         {view === "search" && <DriverSearch />}
 
+        {view === "profile" && <MyReports onShare={() => openView("report")} />}
+
         {view === "report" && <>
           <div className="page-heading"><div><span className="overline">PRIVATE INCIDENT REPORT</span><h1>Your experience <em>matters.</em></h1><p>No account is needed. Your report, driver details, and proof files stay private while they are reviewed.</p></div></div>
           <div className="report-layout">
@@ -202,6 +214,7 @@ export default function DashboardClient({ initialView }: { initialView: View }) 
                   <label className="file-field">Driver photo <span>UP TO 8 MB</span><input name="driverPhoto" type="file" accept="image/jpeg,image/png,image/webp,image/heic,image/heif" /><small>Only add a photo if you have one. It stays private with the report.</small></label>
                   <label className="consent"><input type="checkbox" required /><span>I understand this is a user-submitted claim. After review, signed-in riders may see a match count for a driver identifier; my story and proof stay private. Only grouped counts appear on the public dashboard.</span></label>
                   {formMessage && <div className="form-feedback success" role="status">{formMessage}</div>}
+                  {guestReceipt && <div className="guest-receipt" role="status"><strong>Save your private receipt</strong><p>You can delete this anonymous report from “My reports” later. This browser also remembers the receipt.</p><code>{guestReceipt}</code><button type="button" className="account-button" onClick={() => openView("profile")}>Go to My reports</button></div>}
                   {formError && <div className="form-feedback error" role="alert">{formError}</div>}
                   <button className="primary-button submit-button" type="submit">{submitting ? "Uploading proof…" : "Send report privately"}<Icon name="arrow" size={17} /></button>
                 </fieldset>
